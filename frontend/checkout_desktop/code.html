@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html lang="pt"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Finalizar Pedido | Kanda Luanda</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fff8f5;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ddc1ae;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed": "#1d1d03",
+                      "primary-container": "#ff8c00",
+                      "background": "#fff8f5",
+                      "tertiary-fixed": "#ffdbd0",
+                      "on-background": "#1e1b18",
+                      "error": "#ba1a1a",
+                      "surface-bright": "#fff8f5",
+                      "on-surface": "#1e1b18",
+                      "on-tertiary": "#ffffff",
+                      "on-error": "#ffffff",
+                      "tertiary": "#77574d",
+                      "surface-container-low": "#fbf2ed",
+                      "secondary-fixed": "#e6e5b9",
+                      "on-tertiary-fixed": "#2c160e",
+                      "secondary": "#60603e",
+                      "surface-tint": "#904d00",
+                      "surface": "#fff8f5",
+                      "on-primary": "#ffffff",
+                      "on-surface-variant": "#564334",
+                      "error-container": "#ffdad6",
+                      "primary": "#904d00",
+                      "tertiary-container": "#c8a195",
+                      "tertiary-fixed-dim": "#e7bdb1",
+                      "surface-container-highest": "#e9e1dc",
+                      "on-tertiary-fixed-variant": "#5d4037",
+                      "on-primary-fixed": "#2f1500",
+                      "primary-fixed": "#ffdcc3",
+                      "outline-variant": "#ddc1ae",
+                      "outline": "#897362",
+                      "inverse-primary": "#ffb77d",
+                      "inverse-surface": "#34302c",
+                      "surface-container": "#f5ece7",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary": "#ffffff",
+                      "on-secondary-fixed-variant": "#484828",
+                      "inverse-on-surface": "#f8efea",
+                      "secondary-fixed-dim": "#cac99f",
+                      "on-primary-fixed-variant": "#6e3900",
+                      "primary-fixed-dim": "#ffb77d",
+                      "on-primary-container": "#623200",
+                      "on-secondary-container": "#666643",
+                      "surface-variant": "#e9e1dc",
+                      "secondary-container": "#e6e5b9",
+                      "on-tertiary-container": "#53382f",
+                      "surface-dim": "#e1d8d4",
+                      "surface-container-high": "#efe6e2",
+                      "on-error-container": "#93000a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "24px",
+                      "sm": "12px",
+                      "gutter": "24px",
+                      "container-max": "1200px",
+                      "lg": "48px",
+                      "xl": "80px",
+                      "xs": "4px",
+                      "base": "8px"
+              },
+              "fontFamily": {
+                      "body-md": ["Montserrat"],
+                      "label-sm": ["Montserrat"],
+                      "headline-lg": ["Montserrat"],
+                      "headline-xl-mobile": ["Montserrat"],
+                      "headline-md": ["Montserrat"],
+                      "body-lg": ["Montserrat"],
+                      "headline-xl": ["Montserrat"],
+                      "headline-lg-mobile": ["Montserrat"],
+                      "label-md": ["Montserrat"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "headline-xl-mobile": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-dim z-50">
+<div class="flex justify-between items-center px-gutter py-base w-full max-w-container-max mx-auto">
+<div class="flex items-center gap-sm">
+<a class="flex items-center gap-sm active:scale-95 transition-transform duration-150" href="/">
+<span class="material-symbols-outlined text-primary text-[32px]">storefront</span>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary-fixed">Kanda Luanda</h1>
+</a>
+</div>
+<div class="flex items-center gap-md">
+<button class="flex items-center text-on-surface-variant hover:bg-surface-container-low p-2 rounded-full transition-colors duration-200 active:scale-95">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="flex items-center text-on-surface-variant hover:bg-surface-container-low p-2 rounded-full transition-colors duration-200 active:scale-95">
+<span class="material-symbols-outlined">shopping_cart</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-container-max mx-auto px-gutter py-lg">
+<div class="flex flex-col gap-gutter">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-xs font-label-md text-label-md text-outline">
+<span class="hover:text-primary cursor-pointer transition-colors">Carrinho</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-primary font-bold">Finalizar Pedido</span>
+</nav>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg items-start">
+<!-- Main Content: Steps -->
+<div class="lg:col-span-8 flex flex-col gap-gutter">
+<!-- Section 1: Address Selection -->
+<section class="bg-surface-container-lowest p-md rounded-xl shadow-sm border border-surface-container">
+<div class="flex justify-between items-center mb-md">
+<div class="flex items-center gap-sm">
+<span class="bg-primary-container text-on-primary-container w-8 h-8 rounded-full flex items-center justify-center font-bold">1</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Endereço de Entrega</h2>
+</div>
+<button class="text-primary font-label-md hover:underline decoration-2 underline-offset-4">Adicionar Novo</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-sm">
+<!-- Active Address -->
+<div class="p-md rounded-lg border-2 border-primary bg-primary-container/5 cursor-pointer relative group">
+<div class="absolute top-4 right-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<p class="font-label-md text-primary mb-1">Principal</p>
+<h3 class="font-bold text-on-surface">Minha Casa</h3>
+<p class="font-body-md text-on-surface-variant mt-1">Rua Comandante Gika, Edifício 14</p>
+<p class="font-body-md text-on-surface-variant">Alvalade, Luanda</p>
+<p class="font-body-md text-on-surface-variant mt-2 font-medium">+244 923 000 000</p>
+</div>
+<!-- Inactive Address -->
+<div class="p-md rounded-lg border border-outline-variant hover:border-primary/50 transition-colors cursor-pointer group">
+<p class="font-label-md text-on-surface-variant mb-1">Trabalho</p>
+<h3 class="font-bold text-on-surface">Escritório Kanda</h3>
+<p class="font-body-md text-on-surface-variant mt-1">Av. Talatona, Via S10</p>
+<p class="font-body-md text-on-surface-variant">Belas, Luanda</p>
+<p class="font-body-md text-on-surface-variant mt-2">+244 912 111 222</p>
+</div>
+</div>
+</section>
+<!-- Section 2: Payment Method -->
+<section class="bg-surface-container-lowest p-md rounded-xl shadow-sm border border-surface-container">
+<div class="flex items-center gap-sm mb-md">
+<span class="bg-primary-container text-on-primary-container w-8 h-8 rounded-full flex items-center justify-center font-bold">2</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Método de Pagamento</h2>
+</div>
+<div class="space-y-sm">
+<!-- Payment Option 1 -->
+<label class="flex items-center justify-between p-md rounded-lg border border-primary bg-primary-container/5 cursor-pointer">
+<div class="flex items-center gap-md">
+<input checked="" class="w-5 h-5 text-primary focus:ring-primary border-outline" name="payment" type="radio"/>
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-[32px] text-primary">payments</span>
+<div>
+<p class="font-bold text-on-surface">Multicaixa Express</p>
+<p class="font-label-sm text-on-surface-variant">Pagamento seguro via telemóvel</p>
+</div>
+</div>
+</div>
+<img class="h-8 grayscale group-checked:grayscale-0" alt="A clean, minimalist logo icon for an Angolan digital payment system called Multicaixa Express, stylized with high-contrast primary colors and modern typography, set against a warm white minimalist UI background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAboiSCLPz1oxVy_V4RI27e-HKur76AHZVVM25B4XS_lug3M2lcVv0vwBlbVrFiuqWXZ5jMrCT3---PoqpdjhvKrSV50jr-iR-27rW6pjqGHXL3oLksmU4nR4yzIIARsPT5tINzx-9iKiyf_db_VEFu_E5vgTcEuFZm1FX6emQ-TblDOgzqaO99OCyW_ptSRLQvDD_nHbJKCwayUwRKadK9sZ-K6xIZxRKFF0vtkED1VwwFVJDZpJJJ"/>
+</label>
+<!-- Payment Option 2 -->
+<label class="flex items-center justify-between p-md rounded-lg border border-outline-variant hover:border-primary/50 transition-colors cursor-pointer">
+<div class="flex items-center gap-md">
+<input class="w-5 h-5 text-primary focus:ring-primary border-outline" name="payment" type="radio"/>
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-[32px] text-on-surface-variant">point_of_sale</span>
+<div>
+<p class="font-bold text-on-surface">Pagamento na Entrega</p>
+<p class="font-label-sm text-on-surface-variant">TPA ou Dinheiro (Apenas Luanda)</p>
+</div>
+</div>
+</div>
+</label>
+<!-- Payment Option 3 -->
+<label class="flex items-center justify-between p-md rounded-lg border border-outline-variant hover:border-primary/50 transition-colors cursor-pointer">
+<div class="flex items-center gap-md">
+<input class="w-5 h-5 text-primary focus:ring-primary border-outline" name="payment" type="radio"/>
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-[32px] text-on-surface-variant">account_balance</span>
+<div>
+<p class="font-bold text-on-surface">Transferência Bancária</p>
+<p class="font-label-sm text-on-surface-variant">Envie o comprovativo via WhatsApp</p>
+</div>
+</div>
+</div>
+</label>
+</div>
+</section>
+<!-- Section 3: Delivery Options -->
+<section class="bg-surface-container-lowest p-md rounded-xl shadow-sm border border-surface-container">
+<div class="flex items-center gap-sm mb-md">
+<span class="bg-primary-container text-on-primary-container w-8 h-8 rounded-full flex items-center justify-center font-bold">3</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Opções de Entrega</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-sm">
+<div class="p-md rounded-lg border-2 border-primary bg-primary-container/5 flex flex-col gap-xs">
+<div class="flex justify-between items-start">
+<h3 class="font-bold text-on-surface">Entrega Padrão</h3>
+<p class="font-bold text-primary">1.500 Kz</p>
+</div>
+<p class="font-body-md text-on-surface-variant">Entrega em até 24 horas úteis.</p>
+<div class="mt-2 flex items-center gap-xs text-primary font-label-md">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span>Previsão: Amanhã, 09:00 - 18:00</span>
+</div>
+</div>
+<div class="p-md rounded-lg border border-outline-variant hover:border-primary/50 transition-colors flex flex-col gap-xs cursor-pointer">
+<div class="flex justify-between items-start">
+<h3 class="font-bold text-on-surface">Entrega Express</h3>
+<p class="font-bold text-on-surface-variant">3.000 Kz</p>
+</div>
+<p class="font-body-md text-on-surface-variant">Entrega em até 2 horas úteis.</p>
+<div class="mt-2 flex items-center gap-xs text-on-surface-variant font-label-md">
+<span class="material-symbols-outlined text-[18px]">bolt</span>
+<span>Disponível agora</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Order Summary Sidebar -->
+<aside class="lg:col-span-4 sticky top-[100px] flex flex-col gap-md">
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-md border border-surface-container">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-md">Resumo do Pedido</h2>
+<!-- Mini Item List -->
+<div class="space-y-sm mb-gutter">
+<div class="flex gap-sm">
+<div class="w-16 h-16 rounded-lg bg-surface-container overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" alt="A high-quality, professional product photograph of fresh organic vegetables including vibrant carrots, lush greens, and ripe tomatoes arranged on a rustic wooden surface with soft, warm morning sunlight. The style is clean, editorial, and hospitable, echoing a neighborhood marketplace." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWs99wUf-Cc_D1lH2D_8xOdNiuHdJWsRYlyNbT0Bj2z1Yym1LtsszsZLDlow5yy79yLMa0AdTFCzWP7MYwQnNT1rM4-9uGFBx7GrhPCgCo4VCZevhT1tvFFw545BX-yO8peLWyV450bQ81Xm_SQa3cd7cpMzFFoFeHTcET4Nc_Dqq2GvCTVrRYMqcVk8c_mOVI13NoBE-0vG7wH5FLOBsl3H-fGduTAYBpDMNUKo56ypuXU4_v1WBx"/>
+</div>
+<div class="flex flex-col justify-between py-1">
+<p class="font-bold text-on-surface line-clamp-1">Cesto de Legumes Frescos</p>
+<p class="text-label-sm text-on-surface-variant">Qtd: 1 • 4.500 Kz</p>
+</div>
+</div>
+<div class="flex gap-sm">
+<div class="w-16 h-16 rounded-lg bg-surface-container overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" alt="A close-up photograph of artisan sourdough bread loaves with golden-brown crusts and flour dusting, presented on a minimalist white ceramic platter. The lighting is soft and ambient, creating a warm, cozy atmosphere consistent with a premium local bakery." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnpAu1Q5_QKLxvryXSvFSlOLzX-h0vIjvyTQ5tqndRyA_tXgmyBEV_dnJiqXZwanQmJ0pYNnBfb44AM-p1zGTZCz1Tx639NSR13gfsefUXWulwUYdmlpebFC4AiIddf4rOREKWnaPDIZiw_SPDvMQIexjif3vl4LUITgcmhMsar4cH_OgaZhCvcHTJ4DIjfrfrLcu7-0nlMcPBwjiloB4hXyAeUnfP9_neobUdpNjrwlq02HeAmq9O"/>
+</div>
+<div class="flex flex-col justify-between py-1">
+<p class="font-bold text-on-surface line-clamp-1">Pão Caseiro (Pack 4)</p>
+<p class="text-label-sm text-on-surface-variant">Qtd: 2 • 1.200 Kz</p>
+</div>
+</div>
+</div>
+<!-- Price Breakdown -->
+<div class="space-y-sm border-t border-surface-container pt-md">
+<div class="flex justify-between font-body-md text-on-surface-variant">
+<span>Subtotal</span>
+<span>6.900 Kz</span>
+</div>
+<div class="flex justify-between font-body-md text-on-surface-variant">
+<span>Entrega</span>
+<span>1.500 Kz</span>
+</div>
+<div class="flex justify-between font-body-md text-on-surface-variant">
+<span>Taxas (IVA)</span>
+<span>483 Kz</span>
+</div>
+<div class="flex justify-between font-headline-md text-headline-md text-on-surface border-t border-surface-container pt-sm mt-sm">
+<span>Total</span>
+<span class="text-primary">8.883 Kz</span>
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full mt-gutter bg-primary text-on-primary py-md rounded-lg font-headline-md active:scale-95 transition-all duration-150 shadow-md hover:bg-primary/90">
+                            Finalizar Compra
+                        </button>
+<div class="mt-md flex items-center justify-center gap-xs text-on-surface-variant font-label-sm">
+<span class="material-symbols-outlined text-[16px]">lock</span>
+<span>Pagamento 100% Seguro</span>
+</div>
+</div>
+<!-- Promo Code -->
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-sm border border-surface-container">
+<p class="font-label-md text-on-surface mb-base">Possui um cupão?</p>
+<div class="flex gap-xs">
+<input class="flex-1 px-sm py-xs rounded-lg border-2 border-outline-variant focus:border-primary focus:ring-0 text-body-md bg-white" placeholder="Código de desconto" type="text"/>
+<button class="px-md py-xs bg-secondary-container text-on-secondary-container rounded-lg font-label-md hover:bg-secondary-fixed-dim transition-colors">Aplicar</button>
+</div>
+</div>
+</aside></div>
+</div>
+</main>
+<!-- Simple Footer (since navigation shell is suppressed for transactional focus) -->
+<footer class="w-full bg-surface-container-low border-t border-surface-container mt-xl">
+<div class="max-w-container-max mx-auto px-gutter py-lg flex flex-col md:flex-row justify-between items-center gap-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">storefront</span>
+<p class="font-bold text-primary">Kanda Luanda © 2024</p>
+</div>
+<div class="flex gap-md font-label-sm text-on-surface-variant">
+<a class="hover:text-primary transition-colors" href="#">Termos e Condições</a>
+<a class="hover:text-primary transition-colors" href="#">Privacidade</a>
+<a class="hover:text-primary transition-colors" href="#">Ajuda</a>
+</div>
+<div class="flex gap-sm">
+<img class="h-6 opacity-60" alt="A minimalist horizontal row of secure payment icons including Visa, Mastercard, and Multicaixa, designed as clean vector silhouettes in a sophisticated dark earthy brown color, set against a transparent background for a professional ecommerce footer." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoUGZsN50xTDIBt_hOgsZx99G6z6SpXhCwQJ3s-d2F8ZYH9Aq8_2ApQIbECq7zb_jcfUYNf8FMvm0K9bfgXdSLry31zwOJN3Rf-rCIqCeI_cq7CzsuGZCCNWsTfplGEG1t9Weqox-ZenquYHWJvd9LjmPsgbNWkzBQ6_IBpjxqhgVrY9KVbpHz9ogrktIxnbDlRwo0bUjNcklPg2X4sLv7KJQ1XWyJDxu-ySX0laqjt9p7W-VII4L1"/>
+</div>
+</div>
+</footer>
+<script>
+        // Micro-interactions for address and payment selection
+        document.querySelectorAll('input[name="payment"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                // Logic to visually highlight selected parent label
+                document.querySelectorAll('input[name="payment"]').forEach(i => {
+                    i.closest('label').classList.remove('border-primary', 'bg-primary-container/5');
+                    i.closest('label').classList.add('border-outline-variant');
+                });
+                if(e.target.checked) {
+                    e.target.closest('label').classList.add('border-primary', 'bg-primary-container/5');
+                    e.target.closest('label').classList.remove('border-outline-variant');
+                }
+            });
+        });
+    </script>
+</body></html>

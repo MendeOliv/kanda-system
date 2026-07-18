@@ -1,0 +1,321 @@
+// ==========================================
+// Prisma Schema Example
+// Database Model for Kanda System
+// ==========================================
+// File: backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// Core Models
+// ==========================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  phone         String?
+  avatar        String?
+  role          UserRole  @default(USER)
+  status        String    @default("active")
+  
+  // Relations
+  orders        Order[]
+  cart          Cart?
+  profile       UserProfile?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  
+  @@index([email])
+  @@index([status])
+}
+
+model UserProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  bio             String?
+  company         String?
+  location        String?
+  website         String?
+  socialLinks     Json?     // JSON for social media links
+  preferences     Json?     // User preferences
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Product {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  price           Decimal   @db.Decimal(10, 2)
+  discountPrice   Decimal?  @db.Decimal(10, 2)
+  stock           Int       @default(0)
+  sku             String    @unique
+  category        String
+  images          String[]  // Array of image URLs
+  metadata        Json?     // Additional product data
+  
+  // Relations
+  orders          OrderItem[]
+  cartItems       CartItem[]
+  
+  status          String    @default("active")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([category])
+  @@index([status])
+  @@fulltext([name, description]) // For search
+}
+
+model Cart {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  items           CartItem[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model CartItem {
+  id              String    @id @default(cuid())
+  cartId          String
+  cart            Cart      @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  
+  productId       String
+  product         Product   @relation(fields: [productId], references: [id])
+  
+  quantity        Int       @default(1)
+  price           Decimal   @db.Decimal(10, 2)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([cartId, productId])
+  @@index([cartId])
+}
+
+model Order {
+  id              String    @id @default(cuid())
+  orderNumber     String    @unique
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  
+  items           OrderItem[]
+  
+  totalAmount     Decimal   @db.Decimal(10, 2)
+  discountAmount  Decimal?  @db.Decimal(10, 2)
+  taxAmount       Decimal   @db.Decimal(10, 2)
+  shippingCost    Decimal   @db.Decimal(10, 2)
+  finalAmount     Decimal   @db.Decimal(10, 2)
+  
+  status          OrderStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  trackingNumber  String?
+  
+  shippingAddress Address?
+  billingAddress  Address?
+  
+  // Integration
+  appypayId       String?   // AppyPay transaction ID
+  n8nWorkflowId   String?   // n8n workflow execution ID
+  
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model OrderItem {
+  id              String    @id @default(cuid())
+  orderId         String
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId       String
+  product         Product   @relation(fields: [productId], references: [id])
+  
+  quantity        Int
+  price           Decimal   @db.Decimal(10, 2)
+  discount        Decimal?  @db.Decimal(10, 2)
+  total           Decimal   @db.Decimal(10, 2)
+  
+  @@index([orderId])
+}
+
+model Address {
+  id              String    @id @default(cuid())
+  orderId         String?   @unique
+  order           Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  fullName        String
+  phone           String
+  email           String
+  street          String
+  number          String
+  complement      String?
+  city            String
+  state           String
+  postalCode      String
+  country         String
+  
+  type            AddressType // SHIPPING or BILLING
+  isDefault       Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+}
+
+// ==========================================
+// Integration Models
+// ==========================================
+
+model WhatsAppSession {
+  id              String    @id @default(cuid())
+  sessionId       String    @unique
+  phoneNumber     String?
+  status          String    @default("disconnected")
+  qrCode          String?
+  error           String?
+  
+  metadata        Json?     // WAHA session metadata
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Workflow {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  n8nWorkflowId   String?   @unique
+  
+  trigger         String    // ORDER_PLACED, PAYMENT_RECEIVED, etc.
+  actions         Json      // Array of actions/steps
+  
+  isActive        Boolean   @default(true)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([trigger])
+  @@index([isActive])
+}
+
+model NotificationLog {
+  id              String    @id @default(cuid())
+  type            String    // EMAIL, SMS, WHATSAPP, PUSH
+  recipient       String
+  subject         String?
+  message         String
+  
+  status          String    @default("sent")
+  retries         Int       @default(0)
+  lastError       String?
+  
+  relatedOrderId  String?   // Optional: link to order
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([type])
+  @@index([status])
+  @@index([recipient])
+}
+
+// ==========================================
+// Enums
+// ==========================================
+
+enum UserRole {
+  ADMIN
+  VENDOR
+  USER
+  GUEST
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum AddressType {
+  SHIPPING
+  BILLING
+}
+
+// ==========================================
+// Usage Instructions
+// ==========================================
+/*
+
+1. Save this file as: backend/prisma/schema.prisma
+
+2. Install Prisma (if not already installed):
+   npm install @prisma/client prisma -D
+
+3. Generate Prisma Client:
+   npx prisma generate
+
+4. Create migrations (development):
+   npx prisma migrate dev --name init
+
+5. Push to Supabase (production):
+   DATABASE_URL="postgresql://..." npx prisma db push
+
+6. Open Prisma Studio (development):
+   npx prisma studio
+
+7. Generate types (TypeScript):
+   npx prisma generate
+   // Types available at @prisma/client
+
+8. Example usage in NestJS:
+
+   import { PrismaService } from './prisma.service';
+
+   @Injectable()
+   export class UsersService {
+     constructor(private prisma: PrismaService) {}
+
+     async findAll() {
+       return this.prisma.user.findMany();
+     }
+
+     async create(data) {
+       return this.prisma.user.create({ data });
+     }
+   }
+
+*/

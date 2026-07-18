@@ -1,0 +1,35 @@
+# ==========================================
+# DOCKERFILE - NestJS Backend (Development)
+# ==========================================
+# This Dockerfile is optimized for hot-reload during development
+# For production, a multi-stage build would be recommended
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install base dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    curl
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+# Run development server with hot-reload
+CMD ["npm", "run", "start:dev"]

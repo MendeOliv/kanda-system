@@ -1,0 +1,134 @@
+# ==========================================
+# Render Deployment Configuration
+# For: Backend (NestJS), n8n, WAHA
+# ==========================================
+#
+# Deploy services to Render using this configuration
+# Documentation: https://render.com/docs/infrastructure-as-code
+#
+# Usage:
+# 1. Push this file to your repository
+# 2. Connect repository to Render
+# 3. Render auto-detects this file and deploys services
+
+services:
+  # ==========================================
+  # NestJS Backend Service
+  # ==========================================
+  - type: web
+    name: kanda-backend
+    runtime: node
+    region: ohio  # or closest to your users
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kanda-postgres
+          property: connectionString
+      - key: REDIS_URL
+        sync: false  # Add from environment
+      - key: JWT_SECRET
+        sync: false  # Add from environment
+      - key: JWT_EXPIRATION
+        value: "86400"
+      - key: LOG_LEVEL
+        value: info
+      - key: CORS_ORIGIN
+        sync: false  # Add Vercel URL
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: APPYPAY_API_KEY
+        sync: false
+      - key: APPYPAY_SECRET_KEY
+        sync: false
+      - key: N8N_WEBHOOK_URL
+        sync: false  # Will be https://kanda-n8n-xxxxx.onrender.com
+      - key: WAHA_API_URL
+        sync: false  # Will be https://kanda-waha-xxxxx.onrender.com
+    rootDir: backend
+    healthCheckPath: /health
+    autoDeploy: true
+    repo: https://github.com/YOUR_USERNAME/kanda-system  # Update with your repo
+
+  # ==========================================
+  # n8n Workflow Engine Service
+  # ==========================================
+  - type: web
+    name: kanda-n8n
+    image:
+      url: n8nio/n8n:latest
+    region: ohio  # Same as backend
+    plan: free
+    envVars:
+      - key: DB_TYPE
+        value: postgresdb
+      - key: DB_POSTGRESDB_HOST
+        sync: false  # Add Supabase host
+      - key: DB_POSTGRESDB_PORT
+        value: "5432"
+      - key: DB_POSTGRESDB_DATABASE
+        value: postgres
+      - key: DB_POSTGRESDB_USER
+        value: postgres
+      - key: DB_POSTGRESDB_PASSWORD
+        sync: false  # Add from environment
+      - key: N8N_BASIC_AUTH_ACTIVE
+        value: "true"
+      - key: N8N_BASIC_AUTH_USER
+        value: admin
+      - key: N8N_BASIC_AUTH_PASSWORD
+        sync: false  # Add strong password
+      - key: N8N_INTERNAL_KEY
+        sync: false  # Add 32-char key
+      - key: N8N_WEBHOOK_URL
+        sync: false  # Will be auto-generated
+      - key: WEBHOOK_TUNNEL_URL
+        sync: false  # Will be auto-generated
+      - key: EXECUTIONS_DATA_SAVE_ON_ERROR
+        value: all
+      - key: EXECUTIONS_DATA_SAVE_ON_SUCCESS
+        value: all
+    disk:
+      name: n8n-data
+      mountPath: /home/node/.n8n
+      sizeGb: 1
+
+  # ==========================================
+  # WAHA WhatsApp API Service
+  # ==========================================
+  - type: web
+    name: kanda-waha
+    image:
+      url: devlikeapro/waha:latest
+    region: ohio  # Same as backend
+    plan: free
+    envVars:
+      - key: WHATSAPP_RESTART_ALL_FAILED_SESSION
+        value: "false"
+      - key: LOG_LEVEL
+        value: info
+    disk:
+      name: waha-sessions
+      mountPath: /app/sessions
+      sizeGb: 1
+
+# ==========================================
+# DATABASE (if using Render Postgres)
+# WARNING: Free tier has limitations
+# Recommended: Use Supabase instead (more storage)
+# ==========================================
+databases:
+  - name: kanda-postgres
+    databaseName: postgres
+    plan: free
+    postgresMajorVersion: "16"
+    # Note: Free plan has 256MB limit
+    # For production, use Supabase PostgreSQL instead

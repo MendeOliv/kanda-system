@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html lang="pt"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-fixed": "#1d1d03",
+                    "primary-container": "#ff8c00",
+                    "background": "#fff8f5",
+                    "tertiary-fixed": "#ffdbd0",
+                    "on-background": "#1e1b18",
+                    "error": "#ba1a1a",
+                    "surface-bright": "#fff8f5",
+                    "on-surface": "#1e1b18",
+                    "on-tertiary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "tertiary": "#77574d",
+                    "surface-container-low": "#fbf2ed",
+                    "secondary-fixed": "#e6e5b9",
+                    "on-tertiary-fixed": "#2c160e",
+                    "secondary": "#60603e",
+                    "surface-tint": "#904d00",
+                    "surface": "#fff8f5",
+                    "on-primary": "#ffffff",
+                    "on-surface-variant": "#564334",
+                    "error-container": "#ffdad6",
+                    "primary": "#904d00",
+                    "tertiary-container": "#c8a195",
+                    "tertiary-fixed-dim": "#e7bdb1",
+                    "surface-container-highest": "#e9e1dc",
+                    "on-tertiary-fixed-variant": "#5d4037",
+                    "on-primary-fixed": "#2f1500",
+                    "primary-fixed": "#ffdcc3",
+                    "outline-variant": "#ddc1ae",
+                    "outline": "#897362",
+                    "inverse-primary": "#ffb77d",
+                    "inverse-surface": "#34302c",
+                    "surface-container": "#f5ece7",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed-variant": "#484828",
+                    "inverse-on-surface": "#f8efea",
+                    "secondary-fixed-dim": "#cac99f",
+                    "on-primary-fixed-variant": "#6e3900",
+                    "primary-fixed-dim": "#ffb77d",
+                    "on-primary-container": "#623200",
+                    "on-secondary-container": "#666643",
+                    "surface-variant": "#e9e1dc",
+                    "secondary-container": "#e6e5b9",
+                    "on-tertiary-container": "#53382f",
+                    "surface-dim": "#e1d8d4",
+                    "surface-container-high": "#efe6e2",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "24px",
+                    "sm": "12px",
+                    "gutter": "24px",
+                    "container-max": "1200px",
+                    "lg": "48px",
+                    "xl": "80px",
+                    "xs": "4px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "body-md": ["Montserrat"],
+                    "label-sm": ["Montserrat"],
+                    "headline-lg": ["Montserrat"],
+                    "headline-xl-mobile": ["Montserrat"],
+                    "headline-md": ["Montserrat"],
+                    "body-lg": ["Montserrat"],
+                    "headline-xl": ["Montserrat"],
+                    "headline-lg-mobile": ["Montserrat"],
+                    "label-md": ["Montserrat"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                    "headline-xl-mobile": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #fff8f5;
+            color: #1e1b18;
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .ambient-shadow {
+            box-shadow: 0 10px 30px -10px rgba(144, 77, 0, 0.1);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .product-card:hover .add-to-cart-btn {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .add-to-cart-btn {
+            transform: translateY(10px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-background">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface z-50 flex justify-between items-center px-gutter py-base ambient-shadow">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary text-3xl">storefront</span>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary tracking-tight">Kanda Luanda</h1>
+</div>
+<div class="hidden md:flex flex-1 max-w-xl mx-xl">
+<div class="relative w-full">
+<input class="w-full bg-surface-container-lowest border-2 border-transparent focus:border-primary rounded-xl px-12 py-3 font-body-md text-on-surface outline-none transition-all duration-200" placeholder="Pesquisar produtos frescos..." type="text"/>
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+</div>
+</div>
+<nav class="flex items-center gap-md">
+<div class="hidden md:flex gap-base">
+<button class="px-4 py-2 text-primary font-label-md flex items-center gap-2 hover:bg-surface-container-low rounded-lg transition-colors">
+<span class="material-symbols-outlined">receipt_long</span> Pedidos
+                </button>
+<button class="px-4 py-2 text-on-surface-variant font-label-md flex items-center gap-2 hover:bg-surface-container-low rounded-lg transition-colors">
+<span class="material-symbols-outlined">person</span> Perfil
+                </button>
+</div>
+<button class="relative p-2 text-primary hover:bg-surface-container-low rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined text-3xl">shopping_cart</span>
+<span class="absolute top-0 right-0 bg-primary text-on-primary text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">3</span>
+</button>
+</nav>
+</header>
+<main class="max-w-container-max mx-auto px-gutter py-xl flex gap-lg">
+<!-- Sidebar Filters -->
+<aside class="w-64 flex-shrink-0">
+<div class="bg-surface-container-lowest p-md rounded-xl ambient-shadow flex flex-col gap-md sticky top-32">
+<h2 class="font-headline-md text-headline-md text-on-surface border-b border-surface-container-high pb-sm">Filtros</h2>
+<!-- Category Section -->
+<div>
+<h3 class="font-label-md text-label-md text-outline uppercase tracking-wider mb-sm">Categorias</h3>
+<ul class="flex flex-col gap-xs">
+<li class="flex items-center justify-between p-2 rounded-lg bg-primary-container/10 text-primary font-bold cursor-pointer transition-colors">
+<span class="font-body-md text-body-md">Todos</span>
+<span class="font-label-sm text-label-sm">124</span>
+</li>
+<li class="flex items-center justify-between p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low cursor-pointer transition-colors">
+<span class="font-body-md text-body-md">Hortifrúti</span>
+<span class="font-label-sm text-label-sm">45</span>
+</li>
+<li class="flex items-center justify-between p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low cursor-pointer transition-colors">
+<span class="font-body-md text-body-md">Padaria</span>
+<span class="font-label-sm text-label-sm">22</span>
+</li>
+<li class="flex items-center justify-between p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low cursor-pointer transition-colors">
+<span class="font-body-md text-body-md">Talho</span>
+<span class="font-label-sm text-label-sm">18</span>
+</li>
+<li class="flex items-center justify-between p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low cursor-pointer transition-colors">
+<span class="font-body-md text-body-md">Bebidas</span>
+<span class="font-label-sm text-label-sm">39</span>
+</li>
+</ul>
+</div>
+<!-- Price Range -->
+<div>
+<h3 class="font-label-md text-label-md text-outline uppercase tracking-wider mb-sm">Preço (Kz)</h3>
+<div class="flex flex-col gap-sm">
+<input class="w-full h-1 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary" max="50000" min="0" type="range"/>
+<div class="flex justify-between font-label-sm text-on-surface-variant">
+<span>0 Kz</span>
+<span>50.000 Kz</span>
+</div>
+</div>
+</div>
+<!-- Stock Filter -->
+<div class="flex items-center gap-sm cursor-pointer">
+<input class="w-5 h-5 rounded border-outline text-primary focus:ring-primary cursor-pointer" id="in-stock" type="checkbox"/>
+<label class="font-body-md text-body-md text-on-surface-variant cursor-pointer" for="in-stock">Em stock</label>
+</div>
+<button class="mt-base w-full py-3 bg-secondary text-on-secondary rounded-lg font-label-md hover:bg-secondary/90 transition-all active:scale-95">
+                    Limpar Filtros
+                </button>
+</div>
+</aside>
+<!-- Product Grid Section -->
+<section class="flex-1">
+<!-- Grid Header -->
+<div class="flex justify-between items-end mb-lg">
+<div>
+<h2 class="font-headline-xl text-headline-xl text-on-surface">Produtos Frescos</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">Encontrados 124 produtos para você</p>
+</div>
+<div class="flex items-center gap-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">Ordenar por:</span>
+<select class="bg-surface border-none font-label-md text-primary focus:ring-0 cursor-pointer">
+<option>Mais Relevantes</option>
+<option>Menor Preço</option>
+<option>Maior Preço</option>
+<option>Mais Recentes</option>
+</select>
+</div>
+</div>
+<!-- Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+<!-- Product Card 1 -->
+<div class="product-card group relative bg-surface-container-lowest rounded-xl p-md ambient-shadow flex flex-col gap-sm transition-all duration-300 hover:-translate-y-1">
+<div class="relative overflow-hidden rounded-lg aspect-square mb-sm">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="A macro photography shot of fresh, vibrant organic oranges with water droplets on their textured skin, set against a warm, sunlit background in a rustic Luanda marketplace. The lighting is golden and inviting, highlighting the juicy, natural quality of the fruit. The style is minimalist and clean with a focus on local hospitality and warmth." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpEFTO40cUFroevzfzbE3ERnlD6p6kVsiq-fn43j8ldP3O9woK8hVP5Xz3DInKR7zROyQQCavOMJUQ5GmRSqkdDg1wpq77os366NR5CAyMUF9lvnjKw7wQT6CK4vMmQkurSqOa5fQ0geX_noYjfNYxgYN5w1Lz_ZSfqUUl96zigIO2rL76Ck4Ay4jv5UOridbjSwWK7lGLPxodI6XGtkFQ0LGGmhYburmeoCvPFurglNBoweJNOvpV"/>
+<span class="absolute top-3 left-3 bg-primary text-on-primary font-label-sm px-3 py-1 rounded-full">Destaque</span>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-label-sm text-label-sm text-outline uppercase mb-xs">Hortifrúti</span>
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">Laranjas da Huíla (Kg)</h3>
+<div class="mt-auto pt-sm flex justify-between items-end">
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-primary font-bold">1.250 Kz</span>
+<span class="font-label-sm text-label-sm text-tertiary">Stock: 45 unidades</span>
+</div>
+</div>
+</div>
+<button class="add-to-cart-btn w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 mt-md shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+                        Adicionar
+                    </button>
+</div>
+<!-- Product Card 2 -->
+<div class="product-card group relative bg-surface-container-lowest rounded-xl p-md ambient-shadow flex flex-col gap-sm transition-all duration-300 hover:-translate-y-1">
+<div class="relative overflow-hidden rounded-lg aspect-square mb-sm">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Close-up of artisan baked bread, crusty and golden-brown, dusted with a light layer of flour, resting on a clean white surface with crumbs around it. The background is a soft, warm cream color, typical of a modern hospitality aesthetic. The lighting is soft and directional, emphasizing the crunchy texture of the bread and the feeling of morning freshness." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3oLQVSLCdG-Hc-UhoWIxruyrQyJeMh-U3gPaBVptZmJ1sLLk0SfVzOTBmGgRWd1v3Esh627IPruKU2-HwXaJshrTdaKm_TMHwdgka6Qr6ewd3P6QTP2od0Jh4E5euFG-5UbDhOkjJrkOJobneqwRwjh6rODHeFFpGFzf2jnEktbAPQHjp01zBKoRaq4wVG9buZ28a2yho98vxI7WWGJGLUPQltcbRfqo7QfO4-DejiqX-8SzBm_-y"/>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-label-sm text-label-sm text-outline uppercase mb-xs">Padaria</span>
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">Pão de Luanda Especial</h3>
+<div class="mt-auto pt-sm flex justify-between items-end">
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-primary font-bold">450 Kz</span>
+<span class="font-label-sm text-label-sm text-tertiary">Stock: 12 unidades</span>
+</div>
+</div>
+</div>
+<button class="add-to-cart-btn w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 mt-md shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+                        Adicionar
+                    </button>
+</div>
+<!-- Product Card 3 -->
+<div class="product-card group relative bg-surface-container-lowest rounded-xl p-md ambient-shadow flex flex-col gap-sm transition-all duration-300 hover:-translate-y-1">
+<div class="relative overflow-hidden rounded-lg aspect-square mb-sm">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="High-quality fresh beef steak, richly marbled, displayed on a clean white platter with a garnish of rosemary. The lighting is bright and professionally executed to highlight the freshness and premium quality of the cut. The overall vibe is one of a clean, high-end neighborhood butcher shop, maintaining the warm orange and cream brand palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAISF6Zbf7KedKMADLummrOq9QCNqEEGUg0s6i6w6k6A-OrGWfEJWvufByCr1dYXmMxkgkPp3E-VnXQCsvs7JFHD0yiyU5FcBa3__iDWks6ymtP3dlr8H5Yz_NozaQKzXAd6Da1KYuvGbp4AlbXt_v764GHPpWGGNVfaWmj51TLvZ-59rAcE1OjhtjQZjWAcJkfJ-e0A0Cz-TzwARLXkBHbKPmB17MS2GWjjdXpgponjFhcVInjVoQs"/>
+<span class="absolute top-3 right-3 bg-error text-on-error font-label-sm px-3 py-1 rounded-full">Esgotando</span>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-label-sm text-label-sm text-outline uppercase mb-xs">Talho</span>
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">Lombo de Novilho (Kg)</h3>
+<div class="mt-auto pt-sm flex justify-between items-end">
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-primary font-bold">8.900 Kz</span>
+<span class="font-label-sm text-label-sm text-error">Apenas 3 em stock</span>
+</div>
+</div>
+</div>
+<button class="add-to-cart-btn w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 mt-md shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+                        Adicionar
+                    </button>
+</div>
+<!-- Product Card 4 -->
+<div class="product-card group relative bg-surface-container-lowest rounded-xl p-md ambient-shadow flex flex-col gap-sm transition-all duration-300 hover:-translate-y-1">
+<div class="relative overflow-hidden rounded-lg aspect-square mb-sm">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="A clean, minimalist composition of artisanal organic honey jars on a wooden shelf. The honey is a rich amber color, and the jars have simple, elegant labels. Soft morning light flows from the side, creating long shadows and a sense of calm. The aesthetic is tactile and high-end, representing local Angolan produce in a modern light-mode interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTzxRu9y_IGHB26aPqNY63_IjEJBYCqLXeAfwses-tkkqC3vu3HGATgPsch0fMQpOuEVhulCiiYpyZtd2mCBerMiBXHJQKLCJI8OlS5-UsYsN4yp2UUeic3xt4bhNjQ64gYBA5zrmYxQTlbtzqlSQi0x1oJVbWh7qeZ8YfooW4IURhIhYh0jf6VSA4MmVGJK-ZbdVc0iKfCQI6eaZKyWUcxU1ntkLXhZcT-DSaeZcFtvwj2cnBy5F7"/>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-label-sm text-label-sm text-outline uppercase mb-xs">Mercearia</span>
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">Mel Puro de Malanje</h3>
+<div class="mt-auto pt-sm flex justify-between items-end">
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-primary font-bold">3.500 Kz</span>
+<span class="font-label-sm text-label-sm text-tertiary">Stock: 15 unidades</span>
+</div>
+</div>
+</div>
+<button class="add-to-cart-btn w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 mt-md shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+                        Adicionar
+                    </button>
+</div>
+<!-- Product Card 5 -->
+<div class="product-card group relative bg-surface-container-lowest rounded-xl p-md ambient-shadow flex flex-col gap-sm transition-all duration-300 hover:-translate-y-1">
+<div class="relative overflow-hidden rounded-lg aspect-square mb-sm">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="A beautiful bunch of deep green kale and bright red tomatoes arranged on a neutral surface. The lighting is bright and cheerful, emphasizing the vibrant, natural colors and fresh textures of the vegetables. The scene evokes the feeling of a vibrant neighborhood market in Luanda, focusing on organic health and family-oriented shopping." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDfeueEpm1_ll-vDLT_qIymEj0u9d1wS0r4UzS7xV4vNjCRQKlCrPVV53H1zVlw_p6QgE3Yf2SI0I0GZBVp3sm65-CgVhFTLx48y9rjvLmfMAH1OYADTRskoKb6HaiVjs91Z1QMgvTMSEs-DaxM81Gk6GUbtJ4gZar9w8K5kQMXN45umPSP00ezzj7NxXMV-MIepPCY3SZ-AwCv2r71g1X0zf_A6H-7YEupQ33fXwkCzeE4ZA8StY8"/>
+<span class="absolute top-3 left-3 bg-secondary-container text-on-secondary-container font-label-sm px-3 py-1 rounded-full">Orgânico</span>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-label-sm text-label-sm text-outline uppercase mb-xs">Hortifrúti</span>
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">Cesto Mix Bio (Grande)</h3>
+<div class="mt-auto pt-sm flex justify-between items-end">
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-primary font-bold">7.200 Kz</span>
+<span class="font-label-sm text-label-sm text-tertiary">Stock: 8 unidades</span>
+</div>
+</div>
+</div>
+<button class="add-to-cart-btn w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 mt-md shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+                        Adicionar
+                    </button>
+</div>
+<!-- Product Card 6 -->
+<div class="product-card group relative bg-surface-container-lowest rounded-xl p-md ambient-shadow flex flex-col gap-sm transition-all duration-300 hover:-translate-y-1">
+<div class="relative overflow-hidden rounded-lg aspect-square mb-sm">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="A refreshing bottle of locally produced mineral water and a fresh fruit juice in a glass bottle, beads of condensation running down the side. The lighting is crisp and cool, set against a warm cream and orange background that emphasizes thirst-quenching freshness. The style is modern, minimalist, and deeply rooted in local hospitality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9Xo-fPymGg1LiXLKw2dyezNhrOEZRbXnHxKJSVWfto1ZXt_6v58snQCBYoVEWqhweUYld_nos5fihPtC1QgkJ6Klnq-953uZrNjflM3zrzjKT4IDabUIt7kjnLCLbbX6kn00_HXH2Ymv7N1GdE2rMhSfthruWoszxqpEouQ2KLTt3Tf-EFOAj1wUAS0DCTi7uSuNzzSU3Hw0_LUkl4fmFiYV-WITTIpg2GOXu_NON8hOre0qvqndM"/>
+</div>
+<div class="flex flex-col flex-1">
+<span class="font-label-sm text-label-sm text-outline uppercase mb-xs">Bebidas</span>
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">Sumo Natural Maracujá</h3>
+<div class="mt-auto pt-sm flex justify-between items-end">
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-primary font-bold">1.200 Kz</span>
+<span class="font-label-sm text-label-sm text-tertiary">Stock: 22 unidades</span>
+</div>
+</div>
+</div>
+<button class="add-to-cart-btn w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 mt-md shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+                        Adicionar
+                    </button>
+</div>
+</div>
+<!-- Pagination -->
+<div class="mt-xl flex justify-center items-center gap-sm">
+<button class="p-2 rounded-lg hover:bg-surface-container-low text-outline disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<div class="flex gap-xs">
+<button class="w-10 h-10 rounded-lg bg-primary text-on-primary font-label-md">1</button>
+<button class="w-10 h-10 rounded-lg hover:bg-surface-container-low text-on-surface-variant font-label-md">2</button>
+<button class="w-10 h-10 rounded-lg hover:bg-surface-container-low text-on-surface-variant font-label-md">3</button>
+<span class="w-10 h-10 flex items-center justify-center text-outline">...</span>
+<button class="w-10 h-10 rounded-lg hover:bg-surface-container-low text-on-surface-variant font-label-md">12</button>
+</div>
+<button class="p-2 rounded-lg hover:bg-surface-container-low text-primary">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Simple Bottom Bar for quick info or mobile consistency -->
+<footer class="bg-surface-container-lowest border-t border-surface-container-high py-md mt-xl">
+<div class="max-w-container-max mx-auto px-gutter flex flex-col md:flex-row justify-between items-center gap-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">local_shipping</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Entrega grátis em compras acima de 15.000 Kz</span>
+</div>
+<div class="flex gap-lg">
+<a class="font-label-sm text-label-sm text-outline hover:text-primary transition-colors" href="#">Termos de Uso</a>
+<a class="font-label-sm text-label-sm text-outline hover:text-primary transition-colors" href="#">Política de Privacidade</a>
+<a class="font-label-sm text-label-sm text-outline hover:text-primary transition-colors" href="#">Ajuda &amp; Suporte</a>
+</div>
+<div class="flex items-center gap-sm text-outline">
+<span class="font-label-sm text-label-sm">© 2024 Kanda Luanda. Orgulhosamente Angolano.</span>
+</div>
+</div>
+</footer>
+<script>
+        // Simple micro-interaction for the search bar
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('scale-[1.02]');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('scale-[1.02]');
+        });
+
+        // Add to cart animation feedback
+        const cartBtns = document.querySelectorAll('.add-to-cart-btn');
+        cartBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const originalContent = btn.innerHTML;
+                btn.innerHTML = `<span class="material-symbols-outlined animate-bounce">check_circle</span> Adicionado!`;
+                btn.classList.replace('bg-primary', 'bg-secondary');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalContent;
+                    btn.classList.replace('bg-secondary', 'bg-primary');
+                }, 2000);
+            });
+        });
+    </script>
+</body></html>
