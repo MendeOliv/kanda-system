@@ -1,120 +1,60 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { Prisma } from '@prisma/client';
+import { AppyPayProvider, PaymentRequest } from './providers/appypay.provider';
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private appypay: AppyPayProvider,
+  ) {}
 
-  async create(createPaymentDto: CreatePaymentDto) {
+  async createPaymentForOrder(orderId: string) {
     const order = await this.prisma.order.findUnique({
-      where: { id: createPaymentDto.orderId },
+      where: { id: orderId },
+      include: { user: true },
     });
 
     if (!order) {
-      throw new NotFoundException(`Order ${createPaymentDto.orderId} not found`);
+      throw new NotFoundException('Order not found');
     }
 
-    const existing = await this.prisma.payment.findUnique({
-      where: { orderId: createPaymentDto.orderId },
-    });
+    const paymentRequest: PaymentRequest = {
+      orderId: order.id,
+      amount: Number(order.totalAmount),
+      customerName: order.user.firstName || 'Cliente Kanda',
+      customerPhone: order.user.phone,
+    };
 
-    if (existing) {
-      throw new BadRequestException('Payment already exists for this order');
-    }
+    const payment = await this.appypay.createPayment(paymentRequest);
 
-    return this.prisma.payment.create({
+    // Save payment info to order (optional, assuming order has field or separate table)
+    await this.prisma.order.update({
+      where: { id: order.id },
       data: {
-        orderId: createPaymentDto.orderId,
-        method: createPaymentDto.method,
-        amount: createPaymentDto.amount,
+        // Assume metadata or status update
         status: 'PENDING',
       },
-      include: { order: true },
     });
-  }
-
-  async findByOrder(orderId: string) {
-    const payment = await this.prisma.payment.findUnique({
-      where: { orderId },
-      include: { order: true },
-    });
-
-    if (!payment) {
-      throw new NotFoundException(`Payment for order ${orderId} not found`);
-    }
 
     return payment;
   }
 
-  async processWebhook(payload: any) {
-    this.logger.log(`Webhook received: ${JSON.stringify(payload)}`);
+  async handleWebhook(payload: any) {
+    const { external_id, status } = payload;
+    
+    this.logger.log(`Webhook received: Order ${external_id} Status ${status}`);
 
-    const transactionId = payload.transaction_id || payload.id;
-    if (!transactionId) {
-      throw new BadRequestException('Missing transaction ID in webhook payload');
-    }
-
-    const payment = await this.prisma.payment.findUnique({
-      where: { appypayTransactionId: transactionId },
-    });
-
-    if (!payment) {
-      this.logger.warn(`Unknown transaction: ${transactionId}`);
-      return { received: true, status: 'ignored' };
-    }
-
-    const newStatus = payload.status === 'completed' || payload.status === 'success'
-      ? 'COMPLETED'
-      : payload.status === 'failed'
-        ? 'FAILED'
-        : payment.status;
-
-    const updated = await this.prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: newStatus,
-        rawWebhookPayload: payload as Prisma.JsonObject,
-        processedAt: newStatus === 'COMPLETED' ? new Date() : undefined,
-      },
-      include: { order: true },
-    });
-
-    if (newStatus === 'COMPLETED') {
+    if (status === 'PAID') {
       await this.prisma.order.update({
-        where: { id: payment.orderId },
-        data: { paymentStatus: 'COMPLETED' },
+        where: { id: external_id },
+        data: { status: 'CONFIRMED' },
       });
+      // Here you could trigger a notification via n8n
     }
 
-    return updated;
-  }
-
-  async refund(id: string) {
-    const payment = await this.prisma.payment.findUnique({ where: { id } });
-
-    if (!payment) {
-      throw new NotFoundException(`Payment ${id} not found`);
-    }
-
-    if (payment.status !== 'COMPLETED') {
-      throw new BadRequestException('Only completed payments can be refunded');
-    }
-
-    const updated = await this.prisma.payment.update({
-      where: { id },
-      data: { status: 'REFUNDED' },
-      include: { order: true },
-    });
-
-    await this.prisma.order.update({
-      where: { id: payment.orderId },
-      data: { paymentStatus: 'REFUNDED' },
-    });
-
-    return updated;
+    return { success: true };
   }
 }

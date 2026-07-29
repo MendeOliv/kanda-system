@@ -11,6 +11,28 @@ export class OrdersService {
 
   constructor(private prisma: PrismaService) {}
 
+  /** Resolve delivery fee from the database-baked DeliveryZone. */
+  private async resolveDeliveryFee(zoneName: string): Promise<{
+    fee: number;
+    zoneId: string | null;
+    minOrderValue: number;
+  }> {
+    const zone = await this.prisma.deliveryZone.findFirst({
+      where: { name: zoneName, active: true },
+    });
+
+    if (!zone) {
+      // Fallback for legacy / unrecognised zones
+      throw new BadRequestException(`Delivery zone "${zoneName}" not found or inactive.`);
+    }
+
+    return {
+      fee: Number(zone.fee),
+      zoneId: zone.id,
+      minOrderValue: Number(zone.minOrderValue),
+    };
+  }
+
   async create(createOrderDto: CreateOrderDto, userId?: string) {
     if (!userId) {
       throw new BadRequestException('User authentication required');
@@ -26,7 +48,7 @@ export class OrdersService {
 
     const productIds = createOrderDto.items.map(i => i.productId);
     const products = await this.prisma.product.findMany({
-      where: { id: { in: productIds }, status: 'active' },
+      where: { id: { in: productIds }, status: 'ACTIVE' },
     });
 
     if (products.length !== productIds.length) {
@@ -34,48 +56,79 @@ export class OrdersService {
     }
 
     const productMap = new Map(products.map(p => [p.id, p]));
+
+    const orderItemsData: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
     let subtotal = 0;
 
-    const orderItemsData = createOrderDto.items.map(item => {
+    for (const item of createOrderDto.items) {
       const product = productMap.get(item.productId)!;
+      if (product.stock < item.quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for product ${product.name}. Available: ${product.stock}, requested: ${item.quantity}`,
+        );
+      }
+
       const lineTotal = Number(product.price) * item.quantity;
       subtotal += lineTotal;
-      return {
+
+      orderItemsData.push({
         productId: item.productId,
         quantity: item.quantity,
-        price: product.price,
         productNameSnapshot: product.name,
         unitPriceSnapshot: product.price,
-      };
-    });
+      });
+    }
 
-    const deliveryFee = createOrderDto.deliveryZone === 'KK5000' ? 700 : 500;
+    const { fee: deliveryFee, zoneId, minOrderValue } =
+      await this.resolveDeliveryFee(createOrderDto.deliveryZone);
+
+    if (subtotal < minOrderValue) {
+      throw new BadRequestException(
+        `Minimum order value for this zone is ${minOrderValue} Kz. Your subtotal is ${subtotal} Kz.`,
+      );
+    }
+
     const totalAmount = subtotal + deliveryFee;
 
     const orderNumber = `KND-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    return this.prisma.order.create({
-      data: {
-        orderNumber,
-        userId: user.id,
-        zone: createOrderDto.deliveryZone,
-        deliveryReference: createOrderDto.deliveryReference,
-        addressId: createOrderDto.addressId,
-        paymentMethod: createOrderDto.paymentMethod,
-        deliveryFee,
-        subtotal,
-        totalAmount,
-        status: 'PENDING',
-        paymentStatus: 'PENDING',
-        notes: createOrderDto.notes,
-        items: {
-          create: orderItemsData,
+    this.logger.log(`Creating order ${orderNumber} — zone=${createOrderDto.deliveryZone} fee=${deliveryFee} subtotal=${subtotal} total=${totalAmount}`);
+
+    return this.prisma.$transaction(async (tx) => {
+      for (const item of createOrderDto.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+      }
+
+      const order = await tx.order.create({
+        data: {
+          orderNumber,
+          userId: user.id,
+          deliveryZoneId: zoneId,
+          deliveryReference: createOrderDto.deliveryReference,
+          addressId: createOrderDto.addressId,
+          paymentMethod: createOrderDto.paymentMethod,
+          deliveryFee,
+          subtotal,
+          totalAmount,
+          status: 'PENDING',
+          paymentStatus: 'PENDING',
+          notes: createOrderDto.notes,
+          items: {
+            create: orderItemsData,
+          },
         },
-      },
-      include: {
-        items: { include: { product: true } },
-        user: { select: { id: true, phone: true, firstName: true } },
-      },
+        include: {
+          items: { include: { product: true } },
+          user: { select: { id: true, phone: true, firstName: true } },
+        },
+      });
+
+      this.logger.log(`Order ${order.orderNumber} created successfully.`);
+
+      return order;
     });
   }
 
@@ -84,6 +137,7 @@ export class OrdersService {
       include: {
         items: { include: { product: true } },
         user: { select: { id: true, phone: true, firstName: true } },
+        deliveryZone: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -96,6 +150,7 @@ export class OrdersService {
         items: { include: { product: true } },
         user: { select: { id: true, phone: true, firstName: true, lastName: true } },
         payment: true,
+        deliveryZone: true,
       },
     });
 
@@ -112,6 +167,7 @@ export class OrdersService {
       include: {
         items: { include: { product: true } },
         user: { select: { id: true, phone: true, firstName: true } },
+        deliveryZone: true,
       },
     });
 
@@ -135,6 +191,7 @@ export class OrdersService {
       where: { userId: user.id },
       include: {
         items: { include: { product: true } },
+        deliveryZone: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -153,11 +210,16 @@ export class OrdersService {
       include: {
         items: true,
         user: { select: { id: true, phone: true } },
+        deliveryZone: true,
       },
     });
   }
 
   async remove(id: string) {
+    return this.cancel(id);
+  }
+
+  async cancel(id: string) {
     const order = await this.prisma.order.findUnique({ where: { id } });
 
     if (!order) {

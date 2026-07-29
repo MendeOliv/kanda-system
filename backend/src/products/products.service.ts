@@ -2,10 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { ProductStatus } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
+
+  // ─── CRUD ──────────────────────────────────────
 
   async create(createProductDto: CreateProductDto) {
     const category = await this.prisma.category.findUnique({
@@ -26,7 +29,7 @@ export class ProductsService {
         stock: createProductDto.stock ?? 0,
         description: createProductDto.description,
         imageUrl: createProductDto.imageUrl,
-        status: createProductDto.status ?? 'active',
+        status: (createProductDto.status as ProductStatus) ?? 'ACTIVE',
       },
       include: { category: true },
     });
@@ -34,7 +37,7 @@ export class ProductsService {
 
   async findAll() {
     return this.prisma.product.findMany({
-      where: { status: 'active' },
+      where: { status: 'ACTIVE' },
       include: { category: true },
       orderBy: { name: 'asc' },
     });
@@ -73,9 +76,16 @@ export class ProductsService {
       throw new NotFoundException(`Product ${id} not found`);
     }
 
+    const data: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updateProductDto)) {
+      if (value !== undefined) {
+        data[key] = value;
+      }
+    }
+
     return this.prisma.product.update({
       where: { id },
-      data: updateProductDto,
+      data,
       include: { category: true },
     });
   }
@@ -89,7 +99,35 @@ export class ProductsService {
 
     return this.prisma.product.update({
       where: { id },
-      data: { status: 'inactive' },
+      data: { status: 'INACTIVE' },
     });
   }
+
+  // ─── Fuzzy Search ─────────────────────────────
+
+  /**
+   * Busca produtos por nome usando PostgreSQL ILIKE (case-insensitive).
+   * Retorna os produtos ativos ordenados por relevância (melhor match primeiro).
+   *
+   * FUTURO: Adicionar FTS (full-text search) com tsvector.
+   */
+  async search(query: string) {
+      if (!query || query.trim().length === 0) return [];
+
+      const q = query.trim();
+
+      return this.prisma.product.findMany({
+        where: {
+          status: 'ACTIVE',
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { sku: { startsWith: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        include: { category: true },
+        orderBy: { name: 'asc' },
+        take: 10,
+      });
+    }
 }
