@@ -1,0 +1,148 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "options": {}
+      },
+      "name": "Webhook: WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/api/v1/automation/parse-shopping-list",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Key",
+              "value": "={{$env.N8N_INTERNAL_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{$node[\"Webhook: WhatsApp\"].json[\"body\"][\"text\"]}}"
+            },
+            {
+              "name": "imageUrl",
+              "value": "={{$node[\"Webhook: WhatsApp\"].json[\"body\"][\"image\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "HTTP: Parse List",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/api/v1/automation/orders/sync",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Key",
+              "value": "={{$env.N8N_INTERNAL_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "userPhone",
+              "value": "={{$node[\"Webhook: WhatsApp\"].json[\"body\"][\"from\"]}}"
+            },
+            {
+              "name": "items",
+              "value": "={{$node[\"HTTP: Parse List\"].json[\"products\"]}}"
+            },
+            {
+              "name": "deliveryZone",
+              "value": "KILAMBA"
+            },
+            {
+              "name": "paymentMethod",
+              "value": "APPYPAY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "HTTP: Sync Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.WAHA_API_URL}}/api/sendText",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{$node[\"Webhook: WhatsApp\"].json[\"body\"][\"from\"]}}"
+            },
+            {
+              "name": "text",
+              "value": "=Pedido #{{$node[\"HTTP: Sync Order\"].json[\"orderNumber\"]}} criado!\nTotal: {{$node[\"HTTP: Sync Order\"].json[\"total\"]}} Kz\nPague aqui: {{$node[\"HTTP: Sync Order\"].json[\"paymentUrl\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "WAHA: Send Payment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [700, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Parse List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Parse List": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Sync Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Sync Order": {
+      "main": [
+        [
+          {
+            "node": "WAHA: Send Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
