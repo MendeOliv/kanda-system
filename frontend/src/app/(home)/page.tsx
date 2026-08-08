@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 const CATEGORIES = [
   { name: "Alimentares", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuA6aES_es26rB9FTlqKHm81GJ2PLOfU3ASjelKdpGpA0iGXSI-IQEtR01IlppeBDI1n3mYt9_mkZhq8uPbBdLy5nBrKWzaKpjGec626L9NfHNXLHq__-bk8JNf53dIcLYnOYdFj83X2aWNehLUJhtGdYU6gNMzn_BbdNfQiLRXjMwvQ5VgmbB4OijZWTOZ5J6LaW8S6C6xgKszN5vaD3DWMtZRnVZz0FpUsEv_YNMuoByKhZ7Aq2cAV" },
@@ -17,23 +18,25 @@ const PRODUCTS = [
 ];
 
 export default function HomePage() {
+  const t = useTranslations("home");
+
   return (
     <main className="max-w-container-max mx-auto px-gutter py-md space-y-xl pb-xl">
       <section className="relative h-[480px] rounded-xl overflow-hidden ambient-shadow">
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent z-10" />
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuA00XbNtWqv-_KPdDrpAi4mDzUY9PYUlRy9aXOnrjsEgkdslyKsehwLVxV0R_X7-e3kNxAbrNs1uesuMC_r2YCiDs8S6uo9r-c03_BSVUYhaI5n-mRslOtm7pz0rCXhokxWSMH0-q7FmBGrjjFkEf-nEJWfsJPQPM2OM4Kjpp41_agNXUhhEiwkhsA2zuMelZd6TrmYcJcay1IzetbCOcsJRxwGMEuG5FgxNeW0YeHxFPS_WZ7loWh-')" }} />
         <div className="relative z-20 h-full flex flex-col justify-center px-xl space-y-md">
-          <span className="bg-primary-container text-on-primary-container px-4 py-1 rounded-full font-label-md text-label-md self-start">Destaque da Semana</span>
-          <h2 className="font-headline-xl text-headline-xl text-white max-w-xl">Frescura e Qualidade para a sua Família.</h2>
-          <p className="font-body-lg text-body-lg text-white/90 max-w-lg">Descubra a nossa seleção exclusiva de produtos locais e importados com descontos especiais até 30%.</p>
-          <a href="/mercado" className="bg-primary-container text-on-primary-container px-xl py-md rounded-lg font-label-md text-label-md w-fit hover:brightness-110 active:scale-95 transition-all inline-block">Ver Promoções</a>
+          <span className="bg-primary-container text-on-primary-container px-4 py-1 rounded-full font-label-md text-label-md self-start">{t("hero.badge")}</span>
+          <h2 className="font-headline-xl text-headline-xl text-white max-w-xl">{t("hero.title")}</h2>
+          <p className="font-body-lg text-body-lg text-white/90 max-w-lg">{t("hero.subtitle")}</p>
+          <a href="/mercado" className="bg-primary-container text-on-primary-container px-xl py-md rounded-lg font-label-md text-label-md w-fit hover:brightness-110 active:scale-95 transition-all inline-block">{t("hero.cta")}</a>
         </div>
       </section>
 
       <section className="space-y-md">
         <div className="flex justify-between items-end">
-          <h3 className="font-headline-md text-headline-md text-on-surface">Categorias Populares</h3>
-          <a href="/mercado" className="text-primary font-label-md text-label-md hover:underline">Ver todas</a>
+          <h3 className="font-headline-md text-headline-md text-on-surface">{t("categories.title")}</h3>
+          <a href="/mercado" className="text-primary font-label-md text-label-md hover:underline">{t("categories.viewAll")}</a>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
           {CATEGORIES.map((cat) => (
@@ -41,7 +44,7 @@ export default function HomePage() {
               <div className="aspect-square bg-surface-container rounded-xl overflow-hidden ambient-shadow transition-transform group-hover:scale-[1.02]">
                 <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${cat.image}')` }} />
               </div>
-              <p className="font-label-md text-label-md text-on-surface">{cat.name}</p>
+              <p className="font-label-md text-label-md text-on-surface">{t(`categoriesNames.${cat.name}`)}</p>
             </a>
           ))}
         </div>
@@ -52,22 +55,22 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
           <div className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAm67ydUnwRsV8u6Q8Rh_sedD3nkDyHPeSw_-8h7xSktm-tMSTnCFWSdLZsRSG9p-fYb39UTKocqwdthIv6eHIX0Cbg8WMwNnHAn8pSYRYlxlFrfqzg5EAw4lU4ohCl-g4UdPbYZS5yEwo2kGow7Vaj4eIBEkwyB9_UX90kp7z16CM5pKVwBvIa1nW-LABDZ_g29fvTLQIBdl6z9XNZr3vV2E8WC1obcHOkM-E8s3938yRN3El7AmUq')" }} />
           <div className="absolute bottom-0 left-0 p-md z-20 space-y-xs">
-            <h4 className="font-headline-md text-headline-md text-white">Padaria Artesanal</h4>
-            <p className="text-white/80 font-body-md text-body-md">Pão quente a cada hora, feito com ingredientes 100% naturais.</p>
+            <h4 className="font-headline-md text-headline-md text-white">{t("banners.bakery")}</h4>
+            <p className="text-white/80 font-body-md text-body-md">{t("banners.bakeryDesc")}</p>
           </div>
         </div>
         <div className="flex flex-col gap-md">
           <div className="flex-1 relative rounded-xl overflow-hidden ambient-shadow bg-secondary-container p-md flex flex-col justify-center">
-            <h4 className="font-headline-md text-headline-md text-on-secondary-container">Entrega Rápida</h4>
-            <p className="text-on-secondary-container/80 font-body-md text-body-md">Receba as suas compras em menos de 60 minutos em Luanda.</p>
+            <h4 className="font-headline-md text-headline-md text-on-secondary-container">{t("banners.fastDelivery")}</h4>
+            <p className="text-on-secondary-container/80 font-body-md text-body-md">{t("banners.fastDeliveryDesc")}</p>
             <span className="material-symbols-outlined text-on-secondary-container text-[64px] absolute -bottom-4 -right-4 opacity-20">local_shipping</span>
           </div>
           <div className="flex-1 relative rounded-xl overflow-hidden ambient-shadow group">
             <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent z-10" />
             <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuA4a7nI2jodyKXoO31D3pFJpMVg4dR6NutKrkQ35UHd7aJrgMhZiZbeCHzyqEmQbmUo1A1-gOAWZyYKsx03Rj4f2Y8Z3hvWwcK_a03dw4XMl9MGJKYqdjlU9MDapAKG2hVInHTAwoMHao3ruXbDjbKm02VrLrkdNkcsTOQkFxg03a11dQLUPzjMtF2_X4tcm-8aD6IwiQdlP5M9EpQEhMITnaBglrfBOcUrR1pSomOHx-l0d2M2iIx6')" }} />
             <div className="absolute bottom-0 left-0 p-md z-20">
-              <h4 className="font-headline-md text-headline-md text-white">Garrafeira</h4>
-              <p className="text-white/80 font-label-md text-label-md">Vinhos selecionados de todo o mundo.</p>
+              <h4 className="font-headline-md text-headline-md text-white">{t("banners.wineCellar")}</h4>
+              <p className="text-white/80 font-label-md text-label-md">{t("banners.wineCellarDesc")}</p>
             </div>
           </div>
         </div>
@@ -75,8 +78,8 @@ export default function HomePage() {
 
       <section className="space-y-md">
         <div className="flex justify-between items-center">
-          <h3 className="font-headline-md text-headline-md text-on-surface">Destaques Semanais</h3>
-          <a href="/mercado" className="text-primary font-label-md text-label-md hover:underline">Ver tudo</a>
+          <h3 className="font-headline-md text-headline-md text-on-surface">{t("featured.title")}</h3>
+          <a href="/mercado" className="text-primary font-label-md text-label-md hover:underline">{t("featured.viewAll")}</a>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
           {PRODUCTS.map((p) => (

@@ -1,0 +1,419 @@
+{
+  "metadata": {
+    "title": "Kanda Luanda - O Seu Supermercado de Confiança",
+    "description": "Faça as suas compras online em Luanda. Entrega rápida, produtos frescos e preços justos.",
+    "keywords": "supermercado online,Luanda,compras online,Angola,Kanda",
+    "ogTitle": "Kanda Luanda - Supermercado Online",
+    "ogDescription": "O seu vizinho de confiança em Luanda"
+  },
+  "language": {
+    "label": "Idioma",
+    "pt-AO": "Português",
+    "en": "English"
+  },
+  "brand": {
+    "name": "Kanda Luanda",
+    "tagline": "O seu vizinho de confiança em Luanda, trazendo o melhor do campo para a sua mesa."
+  },
+  "home": {
+    "title": "Kanda Market",
+    "categories": {
+      "title": "Categorias populares",
+      "viewAll": "Ver todas"
+    },
+    "featured": {
+      "title": "Produtos em destaque",
+      "viewAll": "Ver mais produtos"
+    },
+    "hero": {
+      "badge": "Entrega no KK5000 e Kilamba",
+      "title": "A sua mercearia online <span>em Luanda</span>",
+      "subtitle": "Produtos frescos, preços justos e entrega rápida. Faça as suas compras sem sair de casa.",
+      "ctaPrimary": "Ver Produtos",
+      "ctaSecondary": "Zonas de Entrega",
+      "cta": "Ver Produtos"
+    },
+    "features": {
+      "easyShopping": "Compra Fácil",
+      "easyShoppingDesc": "Escolha os seus produtos em segundos",
+      "fastDelivery": "Entrega Rápida",
+      "fastDeliveryDesc": "Receba em casa no mesmo dia",
+      "securePayment": "Pagamento Seguro",
+      "securePaymentDesc": "Dinheiro ou AppyPay à sua escolha"
+    },
+    "banners": {
+      "bakery": "Padaria Artesanal",
+      "bakeryDesc": "Pão quente a cada hora, feito com ingredientes 100% naturais.",
+      "fastDelivery": "Entrega Rápida",
+      "fastDeliveryDesc": "Receba as suas compras em menos de 60 minutos em Luanda.",
+      "wineCellar": "Garrafeira",
+      "wineCellarDesc": "Vinhos selecionados de todo o mundo."
+    },
+    "categoriesNames": {
+      "Alimentares": "Alimentares",
+      "Higiene": "Higiene",
+      "Bebidas": "Bebidas",
+      "Casa": "Casa"
+    }
+  },
+  "header": {
+    "home": "Início",
+    "market": "Mercado",
+    "orders": "Pedidos",
+    "cart": "Carrinho",
+    "account": "Conta",
+    "logout": "Sair",
+    "login": "Entrar",
+    "register": "Registar",
+    "searchPlaceholder": "O que procura hoje?",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu"
+  },
+  "footer": {
+    "title": "Kanda Luanda",
+    "description": "O seu vizinho de confiança em Luanda, trazendo o melhor do campo para a sua mesa.",
+    "customerSupport": "Apoio ao Cliente",
+    "aboutUs": "Sobre Nós",
+    "newsletter": "Newsletter",
+    "newsletterHint": "Receba as melhores ofertas directamente no seu email.",
+    "emailPlaceholder": "O seu email",
+    "subscribed": "Inscrito!",
+    "ok": "Ok",
+    "links": {
+      "faq": "Perguntas Frequentes",
+      "delivery": "Entregas e Prazos",
+      "returns": "Devoluções",
+      "contact": "Contactos",
+      "story": "Nossa História",
+      "sustainability": "Sustentabilidade",
+      "careers": "Trabalhe Connosco",
+      "stores": "As Nossas Lojas",
+      "about": "Sobre nós",
+      "help": "Ajuda",
+      "terms": "Termos e Condições",
+      "privacy": "Privacidade"
+    },
+    "social": {
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "whatsapp": "WhatsApp"
+    },
+    "copyright": "{year} Kanda Supermercado. Todos os direitos reservados."
+  },
+  "nav": {
+    "home": "Início",
+    "market": "Mercado",
+    "orders": "Pedidos",
+    "profile": "Perfil"
+  },
+  "delivery": {
+    "feeLabel": "Taxa de Entrega",
+    "zones": {
+      "KK5000": "KK 5000 (700 Kz)",
+      "KILAMBA": "Kilamba (500 Kz)"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Entrar na sua conta",
+      "email": "Email",
+      "password": "Palavra-passe",
+      "forgotPassword": "Esqueci a palavra-passe",
+      "button": "Entrar",
+      "noAccount": "Não tem conta?",
+      "signupLink": "Criar conta"
+    },
+    "register": {
+      "title": "Criar conta",
+      "name": "Nome completo",
+      "email": "Email",
+      "phone": "Telefone",
+      "password": "Palavra-passe",
+      "confirmPassword": "Confirmar palavra-passe",
+      "button": "Criar conta",
+      "hasAccount": "Já tem conta?",
+      "loginLink": "Entrar"
+    },
+    "form": {
+      "required": "Este campo é obrigatório",
+      "email": "Introduza um email válido",
+      "minLength": "Mínimo de {{count}} caracteres",
+      "passwordMatch": "As palavras-passe não coincidem"
+    },
+    "phone": {
+      "welcome": "Bem-vindo à Kanda",
+      "subtitle": "A sua mercearia de bairro, sempre fresca e próxima de si.",
+      "phoneLabel": "Número de Telemóvel",
+      "phonePlaceholder": "9XX XXX XXX",
+      "codeLabel": "Código recebido por SMS",
+      "codePlaceholder": "123456",
+      "changeNumber": "Alterar número",
+      "sendCode": "Pedir Código",
+      "verifyCode": "Confirmar Código",
+      "sending": "A enviar...",
+      "verifying": "A verificar...",
+      "codeSent": "Código enviado com sucesso para ",
+      "sendError": "Erro ao enviar código. Tente novamente.",
+      "verifyError": "Não foi possível concluir a autenticação. Verifique o código recebido.",
+      "invalidCode": "Código inválido ou expirado. Tente novamente.",
+      "invalidPhone": "Por favor, insira um número de telefone válido.",
+      "sendCodeFirst": "Envie primeiro o código para o telemóvel.",
+      "enterCode": "Introduza o código de 6 dígitos recebido por SMS.",
+      "authSuccess": "Autenticação concluída com sucesso.",
+      "agreeTerms": "Ao continuar, concorda com os nossos",
+      "termsOfService": "Termos de Serviço",
+      "privacy": "Privacidade",
+      "backToHome": "Voltar para o início"
+    }
+  },
+  "product": {
+    "details": {
+      "availability": "Disponibilidade",
+      "inStock": "Em stock",
+      "outOfStock": "Esgotado",
+      "price": "Preço",
+      "originalPrice": "Preço original",
+      "discount": "Desconto",
+      "addToCart": "Adicionar ao carrinho",
+      "buyNow": "Comprar agora",
+      "description": "Descrição",
+      "specifications": "Especificações",
+      "reviews": "Avaliações",
+      "writeReview": "Escrever uma avaliação",
+      "rating": "Classificação",
+      "share": "Partilhar"
+    },
+    "card": {
+      "addToCart": "Adicionar",
+      "viewDetails": "Ver detalhes",
+      "outOfStock": "Esgotado",
+      "freeShipping": "Envio gratuito"
+    }
+  },
+  "cart": {
+    "title": "O Seu Carrinho",
+    "breadcrumb": "Carrinho de Compras",
+    "selectedItems": "Itens Selecionados ({count})",
+    "clearAll": "Limpar Tudo",
+    "viewProducts": "Ver Produtos",
+    "discounts": "Descontos",
+    "orderSummary": "Resumo do Pedido",
+    "empty": {
+      "title": "O seu carrinho está vazio",
+      "subtitle": "Adicione produtos para começar a comprar",
+      "button": "Continuar a comprar"
+    },
+    "items": {
+      "quantity": "Quantidade",
+      "price": "Preço",
+      "subtotal": "Subtotal",
+      "remove": "Remover",
+      "update": "Actualizar"
+    },
+    "summary": {
+      "subtotal": "Subtotal",
+      "delivery": "Taxa de entrega",
+      "total": "Total",
+      "proceedToCheckout": "Proceder para checkout",
+      "freeDeliveryFrom": "Entrega gratuita a partir de {{amount}} KZ"
+    },
+    "actions": {
+      "continueShopping": "Continuar a comprar",
+      "clearCart": "Limpar carrinho"
+    }
+  },
+  "checkout": {
+    "title": "Finalizar compra",
+    "breadcrumb": {
+      "cart": "Carrinho",
+      "checkout": "Finalizar Pedido"
+    },
+    "delivery": {
+      "title": "Opções de Entrega",
+      "standard": "Entrega Padrão",
+      "standardDesc": "Entrega em até 24 horas úteis.",
+      "express": "Entrega Express",
+      "expressDesc": "Entrega em até 2 horas úteis.",
+      "estimated": "Previsão: Amanhã, 09:00 - 18:00",
+      "availableNow": "Disponível agora"
+    },
+    "steps": {
+      "address": "Morada de entrega",
+      "payment": "Método de pagamento",
+      "review": "Revisar encomenda",
+      "confirmation": "Confirmação"
+    },
+    "address": {
+      "title": "Morada de entrega",
+      "subtitle": "Seleccione ou introduza a morada para entrega",
+      "fullName": "Nome completo",
+      "phone": "Telefone",
+      "address": "Morada completa",
+      "reference": "Ponto de referência (opcional)",
+      "saveAddress": "Guardar como morada padrão",
+      "useThisAddress": "Usar esta morada",
+      "addNew": "Adicionar Novo",
+      "primary": "Principal",
+      "work": "Trabalho",
+      "home": "Minha Casa",
+      "selectAddress": "Selecionar morada existente"
+    },
+    "payment": {
+      "title": "Método de pagamento",
+      "subtitle": "Como pretende pagar?",
+      "cash": "Dinheiro na entrega",
+      "appypay": "AppyPay",
+      "multicaixa": "Multicaixa Express",
+      "multicaixaDesc": "Pagamento seguro via telemóvel",
+      "cashDesc": "TPA ou Dinheiro (Apenas Luanda)",
+      "transfer": "Transferência Bancária",
+      "transferDesc": "Envie o comprovativo via WhatsApp",
+      "selectMethod": "Seleccionar método de pagamento",
+      "change": "Alterar"
+    },
+    "summary": {
+      "title": "Resumo do Pedido",
+      "taxes": "Taxas (IVA)",
+      "total": "Total",
+      "processing": "A processar...",
+      "placeOrder": "Finalizar Compra"
+    },
+    "review": {
+      "title": "Revisar encomenda",
+      "items": "Itens",
+      "subtotal": "Subtotal",
+      "deliveryFee": "Taxa de entrega",
+      "total": "Total a pagar",
+      "placeOrder": "Fazer encomenda",
+      "processing": "A processar..."
+    },
+    "confirmation": {
+      "title": "Encomenda realizada!",
+      "subtitle": "Obrigado pela sua compra",
+      "orderNumber": "Número da encomenda",
+      "orderDate": "Data da encomenda",
+      "totalAmount": "Montante total",
+      "deliveryAddress": "Morada de entrega",
+      "paymentMethod": "Método de pagamento",
+      "trackOrder": "Rastrear encomenda",
+      "continueShopping": "Continuar a comprar"
+    },
+    "form": {
+      "required": "Este campo é obrigatório",
+      "phone": "Número de telefone inválido",
+      "zipCode": "Código postal inválido"
+    }
+  },
+  "orders": {
+    "title": "Histórico de encomendas",
+    "empty": {
+      "title": "Nenhuma encomenda encontrada",
+      "subtitle": "Ainda não fez nenhuma encomenda",
+      "button": "Começar a comprar"
+    },
+    "order": {
+      "date": "Data",
+      "status": "Estado",
+      "total": "Total",
+      "viewDetails": "Ver detalhes",
+      "tracking": "Rastrear",
+      "cancel": "Cancelar",
+      "return": "Devolver"
+    },
+    "status": {
+      "pending": "Pendente",
+      "confirmed": "Confirmada",
+      "preparing": "A preparar",
+      "outForDelivery": "Saiu para entrega",
+      "delivered": "Entregue",
+      "cancelled": "Cancelada",
+      "returned": "Devolvida"
+    },
+    "details": {
+      "title": "Detalhes da encomenda {{number}}",
+      "orderInfo": "Informação da encomenda",
+      "customerInfo": "Informação do cliente",
+      "items": "Itens",
+      "paymentInfo": "Informação de pagamento",
+      "deliveryInfo": "Informação de entrega",
+      "statusHistory": "Histórico de estado"
+    }
+  },
+  "profile": {
+    "title": "Perfil",
+    "sections": {
+      "personal": "Dados pessoais",
+      "addresses": "Moradas",
+      "orders": "Encomendas",
+      "security": "Segurança"
+    },
+    "personal": {
+      "name": "Nome completo",
+      "email": "Email",
+      "phone": "Telefone",
+      "saveChanges": "Guardar alterações"
+    },
+    "addresses": {
+      "title": "As suas moradas",
+      "empty": "Não tem moradas guardadas",
+      "addNew": "Adicionar nova morada",
+      "default": "Predefinida",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "setDefault": "Definir como predefinida"
+    },
+    "security": {
+      "title": "Segurança da conta",
+      "changePassword": "Alterar palavra-passe",
+      "currentPassword": "Palavra-passe atual",
+      "newPassword": "Nova palavra-passe",
+      "confirmNewPassword": "Confirmar nova palavra-passe",
+      "updatePassword": "Actualizar palavra-passe"
+    }
+  },
+  "common": {
+    "actions": {
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "edit": "Editar",
+      "create": "Criar",
+      "update": "Actualizar",
+      "search": "Pesquisar",
+      "filter": "Filtrar",
+      "sort": "Ordenar",
+      "view": "Ver",
+      "more": "Mais",
+      "less": "Menos",
+      "close": "Fechar",
+      "open": "Abrir",
+      "yes": "Sim",
+      "no": "Não",
+      "ok": "OK",
+      "tryAgain": "Tentar novamente",
+      "goBack": "Voltar",
+      "continue": "Continuar",
+      "finish": "Terminar",
+      "submit": "Submeter",
+      "loading": "A carregar...",
+      "pleaseWait": "Por favor aguarde",
+      "nothingFound": "Nada encontrado",
+      "tryDifferent": "Experimente outra pesquisa",
+      "error": "Ocorreu um erro",
+      "success": "Operação concluída com sucesso",
+      "warning": "Atenção",
+      "info": "Informação"
+    },
+    "validation": {
+      "required": "Este campo é obrigatório",
+      "email": "Introduza um email válido",
+      "minLength": "Mínimo de {{count}} caracteres",
+      "maxLength": "Máximo de {{count}} caracteres",
+      "pattern": "Formato inválido",
+      "numbersOnly": "Apenas números são permitidos",
+      "lettersOnly": "Apenas letras são permitidas",
+      "passwordMatch": "As palavras-passe não coincidem",
+      "invalidPhone": "Número de telefone inválido"
+    }
+  }
+}
