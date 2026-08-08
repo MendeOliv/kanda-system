@@ -1,18 +1,3 @@
-declare module "firebase/app" {
-  export function initializeApp(config: any, name?: string): any;
-  export function getApps(): any[];
-}
-
-declare module "firebase/auth" {
-  export function getAuth(app?: any): any;
-  export function signInWithPhoneNumber(auth: any, phone: string, appVerifier: any): Promise<any>;
-  export class RecaptchaVerifier {
-    constructor(auth: any, container: string | HTMLElement, params: any);
-    render(): Promise<number>;
-    clear(): void;
-  }
-}
-
 declare module "lucide-react" {
   import { FC, SVGProps } from "react";
   export const Apple: FC<SVGProps<SVGSVGElement>>;

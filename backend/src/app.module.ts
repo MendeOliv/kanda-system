@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { FirebaseModule } from './firebase/firebase.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -9,12 +11,23 @@ import { UsersModule } from './users/users.module';
 import { CategoriesModule } from './categories/categories.module';
 import { AutomationModule } from './automation/automation.module';
 import { PaymentsModule } from './payments/payments.module';
+import { CartModule } from './cart/cart.module';
+import { CheckoutModule } from './checkout/checkout.module';
+import { AdminModule } from './admin/admin.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
+import { ContactModule } from './contact/contact.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000, // 1 minuto
+        limit: 10,   // 10 requests globais por IP
+      },
+    ]),
     FirebaseModule.forRoot(),
     PrismaModule,
     AuthModule,
@@ -24,8 +37,19 @@ import { AppService } from './app.service';
     CategoriesModule,
     AutomationModule,
     PaymentsModule,
+    CartModule,
+    CheckoutModule,
+    AdminModule,
+    NewsletterModule,
+    ContactModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

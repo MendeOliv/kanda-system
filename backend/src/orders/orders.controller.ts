@@ -1,36 +1,42 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
-import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
-@Controller('orders')
+@ApiTags('Orders')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('api/orders')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(private ordersService: OrdersService) {}
 
   @Post()
-  create(@Body() createOrderDto: CreateOrderDto, @Req() req: Request) {
-    const userId = (req as any).user?.firebaseUid || (req as any).user?.uid || (req as any).user?.userId;
-    return this.ordersService.create(createOrderDto, userId);
+  @ApiOperation({ summary: 'Criar pedido' })
+  async create(@Request() req, @Body() body: any) {
+    return this.ordersService.create(req.user.userId, body);
   }
 
   @Get()
-  findAll() {
-    return this.ordersService.findAll();
+  @ApiOperation({ summary: 'Listar pedidos do utilizador' })
+  async findUserOrders(@Request() req) {
+    return this.ordersService.findUserOrders(req.user.userId);
+  }
+
+  @Get(':id/tracking')
+  @ApiOperation({ summary: 'Rastrear pedido' })
+  async tracking(@Request() req, @Param('id') id: string) {
+    return this.ordersService.tracking(req.user.userId, id);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(id);
+  @ApiOperation({ summary: 'Obter detalhe do pedido' })
+  async findOne(@Request() req, @Param('id') id: string) {
+    return this.ordersService.findOne(req.user.userId, id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(id, updateOrderDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ordersService.remove(id);
+  @Put(':id/cancel')
+  @ApiOperation({ summary: 'Cancelar pedido' })
+  async cancel(@Request() req, @Param('id') id: string) {
+    return this.ordersService.cancel(req.user.userId, id);
   }
 }

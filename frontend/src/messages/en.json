@@ -1,0 +1,416 @@
+{
+  "metadata": {
+    "title": "Kanda Luanda - Your Trusted Supermarket",
+    "description": "Shop online in Luanda. Fast delivery, fresh products and fair prices.",
+    "keywords": "online supermarket,Luanda,online shopping,Angola,Kanda",
+    "ogTitle": "Kanda Luanda - Online Supermarket",
+    "ogDescription": "Your trusted neighbourhood store in Luanda"
+  },
+  "language": {
+    "label": "Language",
+    "pt-AO": "Portuguese",
+    "en": "English"
+  },
+  "brand": {
+    "name": "Kanda Luanda",
+    "tagline": "Your trusted neighbour in Luanda, bringing the best from the field to your table."
+  },
+  "home": {
+    "title": "Kanda Market",
+    "hero": {
+      "title": "Welcome to Kanda Market",
+      "badge": "This Week's Highlight",
+      "subtitle": "Discover our exclusive selection of local and imported products with special discounts up to 30%.",
+      "ctaPrimary": "Start shopping",
+      "ctaSecondary": "Browse categories",
+      "cta": "View Promotions"
+    },
+    "categories": {
+      "title": "Popular Categories",
+      "viewAll": "View All",
+      "Alimentares": "Groceries",
+      "Higiene": "Hygiene",
+      "Bebidas": "Beverages",
+      "Casa": "Home"
+    },
+    "featured": {
+      "title": "Featured Products",
+      "viewAll": "View More"
+    },
+    "features": {
+      "easyShopping": "Easy Shopping",
+      "easyShoppingDesc": "Choose your products in seconds",
+      "fastDelivery": "Fast Delivery",
+      "fastDeliveryDesc": "Receive at home the same day",
+      "securePayment": "Secure Payment",
+      "securePaymentDesc": "Cash or AppyPay at your choice"
+    },
+    "banners": {
+      "bakery": "Artisan Bakery",
+      "bakeryDesc": "Fresh bread every hour, made with 100% natural ingredients.",
+      "fastDelivery": "Fast Delivery",
+      "fastDeliveryDesc": "Receive your purchases in less than 60 minutes in Luanda.",
+      "wineCellar": "Wine Cellar",
+      "wineCellarDesc": "Selected wines from around the world."
+    }
+  },
+  "header": {
+    "home": "Home",
+    "market": "Market",
+    "orders": "Orders",
+    "cart": "Cart",
+    "account": "Account",
+    "logout": "Log out",
+    "login": "Sign in",
+    "register": "Register",
+    "searchPlaceholder": "What are you looking for today?",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "footer": {
+    "title": "Kanda Luanda",
+    "description": "Your trusted neighbour in Luanda, bringing the best from the field to your table.",
+    "customerSupport": "Customer Support",
+    "aboutUs": "About Us",
+    "newsletter": "Newsletter",
+    "newsletterHint": "Get the best deals straight to your inbox.",
+    "emailPlaceholder": "Your email",
+    "subscribed": "Subscribed!",
+    "ok": "Ok",
+    "links": {
+      "faq": "FAQ",
+      "delivery": "Delivery & Times",
+      "returns": "Returns",
+      "contact": "Contact",
+      "story": "Our Story",
+      "sustainability": "Sustainability",
+      "careers": "Work With Us",
+      "stores": "Our Stores",
+      "about": "About us",
+      "help": "Help",
+      "terms": "Terms & Conditions",
+      "privacy": "Privacy"
+    },
+    "social": {
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "whatsapp": "WhatsApp"
+    },
+    "copyright": "{year} Kanda Supermarket. All rights reserved."
+  },
+  "nav": {
+    "home": "Home",
+    "market": "Market",
+    "orders": "Orders",
+    "profile": "Profile"
+  },
+  "delivery": {
+    "feeLabel": "Delivery Fee",
+    "zones": {
+      "KK5000": "KK 5000 (700 Kz)",
+      "KILAMBA": "Kilamba (500 Kz)"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign In to Your Account",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot Password",
+      "button": "Sign In",
+      "noAccount": "Don't have an account?",
+      "signupLink": "Create Account"
+    },
+    "register": {
+      "title": "Create Account",
+      "name": "Full Name",
+      "email": "Email",
+      "phone": "Phone",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "button": "Create Account",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Sign In"
+    },
+    "form": {
+      "required": "This field is required",
+      "email": "Invalid email",
+      "minLength": "Minimum {{count}} characters",
+      "passwordMatch": "Passwords do not match"
+    },
+    "phone": {
+      "welcome": "Welcome to Kanda",
+      "subtitle": "Your neighbourhood grocery, always fresh and close to you.",
+      "phoneLabel": "Phone Number",
+      "phonePlaceholder": "9XX XXX XXX",
+      "codeLabel": "SMS Code",
+      "codePlaceholder": "123456",
+      "changeNumber": "Change number",
+      "sendCode": "Send Code",
+      "verifyCode": "Verify Code",
+      "sending": "Sending...",
+      "verifying": "Verifying...",
+      "codeSent": "Code sent successfully to ",
+      "sendError": "Error sending code. Please try again.",
+      "verifyError": "Could not complete authentication. Please check the code.",
+      "invalidCode": "Invalid or expired code. Please try again.",
+      "invalidPhone": "Please enter a valid phone number.",
+      "sendCodeFirst": "Please send the code to your phone first.",
+      "enterCode": "Enter the 6-digit code received via SMS.",
+      "authSuccess": "Authentication completed successfully.",
+      "agreeTerms": "By continuing, you agree to our",
+      "termsOfService": "Terms of Service",
+      "privacy": "Privacy",
+      "backToHome": "Back to home"
+    }
+  },
+  "product": {
+    "details": {
+      "availability": "Availability",
+      "inStock": "In Stock",
+      "outOfStock": "Out of Stock",
+      "price": "Price",
+      "originalPrice": "Original Price",
+      "discount": "Discount",
+      "addToCart": "Add to Cart",
+      "buyNow": "Buy Now",
+      "description": "Description",
+      "specifications": "Specifications",
+      "reviews": "Reviews",
+      "writeReview": "Write a Review",
+      "rating": "Rating",
+      "share": "Share"
+    },
+    "card": {
+      "addToCart": "Add to Cart",
+      "viewDetails": "View Details",
+      "outOfStock": "Out of Stock",
+      "freeShipping": "Free Shipping"
+    }
+  },
+  "cart": {
+    "title": "Your cart",
+    "breadcrumb": "Shopping Cart",
+    "selectedItems": "Selected items ({count})",
+    "clearAll": "Clear all",
+    "viewProducts": "Browse products",
+    "discounts": "Discounts",
+    "orderSummary": "Order summary",
+    "empty": {
+      "title": "Your cart is empty",
+      "subtitle": "Add products to start shopping",
+      "button": "Continue shopping"
+    },
+    "items": {
+      "quantity": "Quantity",
+      "price": "Price",
+      "subtotal": "Subtotal",
+      "remove": "Remove",
+      "update": "Update"
+    },
+    "summary": {
+      "subtotal": "Subtotal",
+      "delivery": "Delivery Fee",
+      "total": "Total",
+      "proceedToCheckout": "Proceed to Checkout",
+      "freeDeliveryFrom": "Free delivery from {{amount}} KZ"
+    },
+    "actions": {
+      "continueShopping": "Continue Shopping",
+      "clearCart": "Clear Cart"
+    }
+  },
+  "checkout": {
+    "title": "Checkout",
+    "steps": {
+      "address": "Delivery Address",
+      "payment": "Payment Method",
+      "review": "Review Order",
+      "confirmation": "Confirmation"
+    },
+    "address": {
+      "title": "Delivery Address",
+      "subtitle": "Select or enter your delivery address",
+      "fullName": "Full Name",
+      "phone": "Phone",
+      "address": "Full Address",
+      "reference": "Landmark (optional)",
+      "saveAddress": "Save as default address",
+      "useThisAddress": "Use this address",
+      "addNew": "Add New",
+      "selectAddress": "Select existing address",
+      "primary": "Primary",
+      "work": "Work",
+      "home": "Home"
+    },
+    "breadcrumb": {
+      "cart": "Cart",
+      "checkout": "Checkout"
+    },
+    "payment": {
+      "title": "Payment Method",
+      "subtitle": "How would you like to pay?",
+      "cash": "Cash on Delivery",
+      "appypay": "AppyPay",
+      "selectMethod": "Select payment method",
+      "change": "Change",
+      "multicaixa": "Multicaixa Express",
+      "multicaixaDesc": "Secure mobile payment",
+      "cashDesc": "POS or Cash (Luanda only)",
+      "transfer": "Bank Transfer",
+      "transferDesc": "Send receipt via WhatsApp"
+    },
+    "delivery": {
+      "standard": "Standard Delivery",
+      "standardDesc": "Delivery within 24 business hours.",
+      "express": "Express Delivery",
+      "expressDesc": "Delivery within 2 business hours.",
+      "estimated": "Estimated: Tomorrow, 09:00 - 18:00",
+      "availableNow": "Available now"
+    },
+    "summary": {
+      "title": "Order Summary",
+      "taxes": "Taxes (VAT)",
+      "total": "Total",
+      "processing": "Processing...",
+      "placeOrder": "Place Order"
+    },
+    "review": {
+      "title": "Review Order",
+      "items": "Items",
+      "subtotal": "Subtotal",
+      "deliveryFee": "Delivery Fee",
+      "total": "Total to Pay",
+      "placeOrder": "Place Order",
+      "processing": "Processing..."
+    },
+    "confirmation": {
+      "title": "Order Placed!",
+      "subtitle": "Thank you for your purchase",
+      "orderNumber": "Order Number",
+      "orderDate": "Order Date",
+      "totalAmount": "Total Amount",
+      "deliveryAddress": "Delivery Address",
+      "paymentMethod": "Payment Method",
+      "trackOrder": "Track Order",
+      "continueShopping": "Continue Shopping"
+    },
+    "form": {
+      "required": "This field is required",
+      "phone": "Invalid phone number",
+      "zipCode": "Invalid postal code"
+    }
+  },
+  "orders": {
+    "title": "Order History",
+    "empty": {
+      "title": "No orders found",
+      "subtitle": "You haven't placed any orders yet",
+      "button": "Start Shopping"
+    },
+    "order": {
+      "date": "Date",
+      "status": "Status",
+      "total": "Total",
+      "viewDetails": "View Details",
+      "tracking": "Track",
+      "cancel": "Cancel",
+      "return": "Return"
+    },
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "preparing": "Preparing",
+      "outForDelivery": "Out for Delivery",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "returned": "Returned"
+    },
+    "details": {
+      "title": "Order Details {{number}}",
+      "orderInfo": "Order Information",
+      "customerInfo": "Customer Information",
+      "items": "Items",
+      "paymentInfo": "Payment Information",
+      "deliveryInfo": "Delivery Information",
+      "statusHistory": "Status History"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "sections": {
+      "personal": "Personal Data",
+      "addresses": "Addresses",
+      "orders": "Orders",
+      "security": "Security"
+    },
+    "personal": {
+      "name": "Full Name",
+      "email": "Email",
+      "phone": "Phone",
+      "saveChanges": "Save Changes"
+    },
+    "addresses": {
+      "title": "Your Addresses",
+      "empty": "No saved addresses",
+      "addNew": "Add New Address",
+      "default": "Default",
+      "edit": "Edit",
+      "delete": "Delete",
+      "setDefault": "Set as Default"
+    },
+    "security": {
+      "title": "Account Security",
+      "changePassword": "Change Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmNewPassword": "Confirm New Password",
+      "updatePassword": "Update Password"
+    }
+  },
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "create": "Create",
+      "update": "Update",
+      "search": "Search",
+      "filter": "Filter",
+      "sort": "Sort",
+      "view": "View",
+      "more": "More",
+      "less": "Less",
+      "close": "Close",
+      "open": "Open",
+      "yes": "Yes",
+      "no": "No",
+      "ok": "OK",
+      "tryAgain": "Try Again",
+      "goBack": "Go Back",
+      "continue": "Continue",
+      "finish": "Finish",
+      "submit": "Submit",
+      "loading": "Loading...",
+      "pleaseWait": "Please wait",
+      "nothingFound": "Nothing found",
+      "tryDifferent": "Try a different search",
+      "error": "An error occurred",
+      "success": "Operation completed successfully",
+      "warning": "Warning",
+      "info": "Information"
+    },
+    "validation": {
+      "required": "This field is required",
+      "email": "Enter a valid email",
+      "minLength": "Minimum {{count}} characters",
+      "maxLength": "Maximum {{count}} characters",
+      "pattern": "Invalid format",
+      "numbersOnly": "Only numbers are allowed",
+      "lettersOnly": "Only letters are allowed",
+      "passwordMatch": "Passwords do not match",
+      "invalidPhone": "Invalid phone number"
+    }
+  }
+}

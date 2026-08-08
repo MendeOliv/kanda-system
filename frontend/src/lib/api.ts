@@ -56,8 +56,7 @@ export const userApi = {
 };
 
 export const paymentApi = {
-  create: (data: any) => api.post("/payments", data).then((r) => r.data),
-  byOrder: (orderId: string) => api.get(`/payments/order/${orderId}`).then((r) => r.data),
+  byOrder: (orderId: string) => api.post(`/payments/order/${orderId}`).then((r) => r.data),
 };
 
 export default api;

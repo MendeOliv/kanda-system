@@ -89,7 +89,7 @@ async function main() {
         stock: p.stock,
         categoryId,
         imageUrl,
-        status: 'active',
+        status: 'ACTIVE',
       },
     });
     count++;

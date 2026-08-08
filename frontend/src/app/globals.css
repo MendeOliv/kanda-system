@@ -4,10 +4,29 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background-color: #fff8f5;
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fff8f5 0%, #fff2e9 48%, #f9eadf 100%);
   color: #1e1b18;
   font-family: 'Montserrat', sans-serif;
+}
+
+::selection {
+  background: #904d00;
+  color: #ffffff;
 }
 
 .material-symbols-outlined {

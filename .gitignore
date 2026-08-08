@@ -32,3 +32,24 @@ redis_data/
 n8n_data/
 waha_sessions/
 waha_files/
+
+# Next.js build cache
+.next/
+next-env.d.ts
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+
+# Test coverage
+coverage/
+backend/coverage/
+
+# Hermes agent infra
+.hermes/
+
+# Backup / scratch files
+*.bak
+*.backup
+*.old
+
+# Windows null device artifact
+nul

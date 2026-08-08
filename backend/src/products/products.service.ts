@@ -2,11 +2,21 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { ProductStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
+
+  private toNumber(product: any) {
+    return product
+      ? {
+          ...product,
+          price: Number(product.price),
+          discountPrice: product.discountPrice != null ? Number(product.discountPrice) : null,
+        }
+      : product;
+  }
 
   // ─── CRUD ──────────────────────────────────────
 
@@ -14,33 +24,69 @@ export class ProductsService {
     const category = await this.prisma.category.findUnique({
       where: { id: createProductDto.categoryId },
     });
-
     if (!category) {
-      throw new NotFoundException(`Category ${createProductDto.categoryId} not found`);
+      throw new NotFoundException(`Categoria ${createProductDto.categoryId} não encontrada`);
     }
 
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: {
         name: createProductDto.name,
         sku: createProductDto.sku,
         categoryId: createProductDto.categoryId,
         price: createProductDto.price,
-        discountPrice: createProductDto.discountPrice,
+        discountPrice: createProductDto.discountPrice ?? null,
         stock: createProductDto.stock ?? 0,
         description: createProductDto.description,
         imageUrl: createProductDto.imageUrl,
-        status: (createProductDto.status as ProductStatus) ?? 'ACTIVE',
+        status: createProductDto.status ?? 'active',
       },
       include: { category: true },
     });
+
+    return this.toNumber(product);
   }
 
-  async findAll() {
-    return this.prisma.product.findMany({
-      where: { status: 'ACTIVE' },
-      include: { category: true },
-      orderBy: { name: 'asc' },
-    });
+  async findAll(query: any = {}) {
+    const { category, page = 1, limit = 20, search, priceMin, priceMax } = query;
+    const pageNum = parseInt(page.toString(), 10);
+    const limitNum = parseInt(limit.toString(), 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const where: any = { status: 'active' };
+
+    if (category) {
+      where.category = { name: { contains: category, mode: 'insensitive' } };
+    }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (priceMin || priceMax) {
+      where.price = {};
+      if (priceMin) where.price.gte = parseFloat(priceMin.toString());
+      if (priceMax) where.price.lte = parseFloat(priceMax.toString());
+    }
+
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        skip,
+        take: limitNum,
+        include: { category: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return {
+      products: products.map((c) => this.toNumber(c)),
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+    };
   }
 
   async findOne(id: string) {
@@ -48,12 +94,10 @@ export class ProductsService {
       where: { id },
       include: { category: true },
     });
-
     if (!product) {
-      throw new NotFoundException(`Product ${id} not found`);
+      throw new NotFoundException(`Produto ${id} não encontrado`);
     }
-
-    return product;
+    return this.toNumber(product);
   }
 
   async findBySku(sku: string) {
@@ -61,73 +105,98 @@ export class ProductsService {
       where: { sku },
       include: { category: true },
     });
-
     if (!product) {
-      throw new NotFoundException(`Product with SKU '${sku}' not found`);
+      throw new NotFoundException(`Produto com SKU '${sku}' não encontrado`);
     }
-
-    return product;
+    return this.toNumber(product);
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto) {
-    const product = await this.prisma.product.findUnique({ where: { id } });
-
+  async findBySlug(slug: string) {
+    // Slug pode ser o sku ou o id
+    const product = await this.prisma.product.findFirst({
+      where: {
+        OR: [{ sku: slug }, { id: slug }],
+        status: 'active',
+      },
+      include: { category: true },
+    });
     if (!product) {
-      throw new NotFoundException(`Product ${id} not found`);
+      throw new NotFoundException('Produto não encontrado');
+    }
+    return { product: this.toNumber(product) };
+  }
+
+  async search(query: string) {
+    if (!query || query.trim().length === 0) return [];
+
+    const q = query.trim();
+    const products = await this.prisma.product.findMany({
+      where: {
+        status: 'active',
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { sku: { startsWith: q, mode: 'insensitive' } },
+          { description: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      take: 10,
+    });
+
+    return products.map((c) => this.toNumber(c));
+  }
+
+  async update(id: string, updateProductDto: UpdateProductDto | any) {
+    const product = await this.prisma.product.findUnique({ where: { id } });
+    if (!product) {
+      throw new NotFoundException(`Produto ${id} não encontrado`);
     }
 
-    const data: Record<string, any> = {};
+    const data: any = {};
     for (const [key, value] of Object.entries(updateProductDto)) {
       if (value !== undefined) {
         data[key] = value;
       }
     }
 
-    return this.prisma.product.update({
+    const updated = await this.prisma.product.update({
       where: { id },
       data,
       include: { category: true },
     });
+
+    return this.toNumber(updated);
   }
 
   async remove(id: string) {
     const product = await this.prisma.product.findUnique({ where: { id } });
-
     if (!product) {
-      throw new NotFoundException(`Product ${id} not found`);
+      throw new NotFoundException(`Produto ${id} não encontrado`);
     }
 
-    return this.prisma.product.update({
+    const updated = await this.prisma.product.update({
       where: { id },
-      data: { status: 'INACTIVE' },
+      data: { status: 'inactive' },
     });
+    return this.toNumber(updated);
   }
 
-  // ─── Fuzzy Search ─────────────────────────────
+  async listCategories() {
+    const categories = await this.prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+    return { categories };
+  }
 
-  /**
-   * Busca produtos por nome usando PostgreSQL ILIKE (case-insensitive).
-   * Retorna os produtos ativos ordenados por relevância (melhor match primeiro).
-   *
-   * FUTURO: Adicionar FTS (full-text search) com tsvector.
-   */
-  async search(query: string) {
-      if (!query || query.trim().length === 0) return [];
-
-      const q = query.trim();
-
-      return this.prisma.product.findMany({
-        where: {
-          status: 'ACTIVE',
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            { sku: { startsWith: q, mode: 'insensitive' } },
-            { description: { contains: q, mode: 'insensitive' } },
-          ],
-        },
-        include: { category: true },
-        orderBy: { name: 'asc' },
-        take: 10,
-      });
-    }
+  async getFeatured() {
+    const products = await this.prisma.product.findMany({
+      where: { status: 'active' },
+      take: 10,
+      include: { category: true },
+      orderBy: [{ stock: 'desc' }, { createdAt: 'desc' }],
+    });
+    return {
+      products: products.map((c) => this.toNumber(c)),
+    };
+  }
 }

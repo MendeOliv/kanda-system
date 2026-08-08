@@ -1,49 +1,48 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Put, Post, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
-@ApiTags('Users')
+@ApiTags('User')
 @ApiBearerAuth()
-@Controller('users')
+@UseGuards(JwtAuthGuard)
+@Controller('api/user')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private usersService: UsersService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Create a user' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  @Get('profile')
+  @ApiOperation({ summary: 'Obter perfil do utilizador autenticado' })
+  async getProfile(@Request() req) {
+    return this.usersService.getProfile(req.user.userId);
   }
 
-  @Get()
-  @ApiOperation({ summary: 'List all users' })
-  findAll() {
-    return this.usersService.findAll();
+  @Put('profile')
+  @ApiOperation({ summary: 'Atualizar perfil do utilizador' })
+  async updateProfile(@Request() req, @Body() body: any) {
+    return this.usersService.updateProfile(req.user.userId, body);
   }
 
-  @Get('me')
-  @ApiOperation({ summary: 'Get current authenticated user' })
-  findMe(@CurrentUser() user: any) {
-    return this.usersService.findByFirebaseUid(user.uid);
+  @Get('addresses')
+  @ApiOperation({ summary: 'Listar moradas do utilizador' })
+  async listAddresses(@Request() req) {
+    return this.usersService.listAddresses(req.user.userId);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+  @Post('addresses')
+  @ApiOperation({ summary: 'Adicionar nova morada' })
+  async addAddress(@Request() req, @Body() body: any) {
+    return this.usersService.addAddress(req.user.userId, body);
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update user' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  @Put('addresses/:id')
+  @ApiOperation({ summary: 'Editar morada existente' })
+  async updateAddress(@Request() req, @Param('id') id: string, @Body() body: any) {
+    return this.usersService.updateAddress(req.user.userId, id, body);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Soft delete user' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  @Delete('addresses/:id')
+  @ApiOperation({ summary: 'Remover morada' })
+  async deleteAddress(@Request() req, @Param('id') id: string) {
+    return this.usersService.deleteAddress(req.user.userId, id);
   }
 }

@@ -2,22 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const ITEMS = [
-  { label: "Início", icon: "home", href: "/" },
-  { label: "Mercado", icon: "local_mall", href: "/mercado" },
-  { label: "Pedidos", icon: "receipt_long", href: "/pedidos" },
-  { label: "Perfil", icon: "person", href: "/login" },
-];
+import { useTranslations } from "next-intl";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const t = useTranslations("nav");
+
+  const items = [
+    { label: t("home"), icon: "home", href: "/" },
+    { label: t("market"), icon: "local_mall", href: "/mercado" },
+    { label: t("orders"), icon: "receipt_long", href: "/pedidos" },
+    { label: t("profile"), icon: "person", href: "/login" },
+  ];
 
   if (pathname.startsWith("/admin")) return null;
 
   return (
     <nav className="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-6 bg-surface shadow-md rounded-t-xl border-t border-outline-variant/20">
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const isActive = pathname === item.href;
         return (
           <Link

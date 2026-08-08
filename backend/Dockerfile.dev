@@ -21,6 +21,15 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+# Copy Prisma schema first
+COPY prisma ./prisma
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Copy scripts directory
+COPY ../scripts ./scripts
+
 # Copy source code
 COPY . .
 
@@ -29,7 +38,7 @@ EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
-    CMD curl -f http://localhost:3001/health || exit 1
+    CMD curl -f http://localhost:3001/api/v1/health || exit 1
 
 # Run development server with hot-reload
 CMD ["npm", "run", "start:dev"]

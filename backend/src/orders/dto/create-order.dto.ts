@@ -7,11 +7,6 @@ export enum PaymentMethod {
   APPYPAY = 'APPYPAY',
 }
 
-export enum Zone {
-  KK5000 = 'KK5000',
-  KILAMBA = 'KILAMBA',
-}
-
 export class OrderItemDto {
   @ApiProperty({ description: 'Product ID' })
   @IsString()
@@ -24,9 +19,9 @@ export class OrderItemDto {
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ enum: Zone })
-  @IsEnum(Zone)
-  deliveryZone: Zone;
+  @ApiProperty({ description: 'Delivery zone name (e.g., KK5000, Kilamba)' })
+  @IsString()
+  deliveryZone: string;
 
   @ApiProperty()
   @IsString()
