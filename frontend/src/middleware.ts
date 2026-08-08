@@ -34,5 +34,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/pedidos/:path*', '/moradas/:path*', '/login'],
+  matcher: ['/((?!api|_next|.*\\..*).*)'],
 };
