@@ -12,7 +12,12 @@ describe('AutomationService', () => {
   let service: AutomationService;
 
   const mockPrisma = {
-    user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+    user: {
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
   };
   const mockProducts = { search: jest.fn() };
   const mockOrders = { create: jest.fn() };
@@ -123,12 +128,13 @@ describe('AutomationService', () => {
   // ─── syncOrder ──────────────────────────────────────────
   describe('syncOrder', () => {
     it('deve rejeitar dados inválidos (userPhone em falta)', async () => {
-      await expect(service.syncOrder({ items: [] })).rejects.toThrow(BadRequestException);
+      await expect(
+        service.syncOrder({ userPhone: '', items: [], deliveryZone: 'KK5000' } as any),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('deve criar order e link de pagamento para APPYPAY', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue({ id: 'u1', firebaseUid: 'wa:244999000', phone: '244999000' });
+      (mockPrisma.user.upsert as jest.Mock).mockResolvedValue({ id: 'u1', firebaseUid: 'wa:244999000', phone: '244999000' });
 
       (mockOrders.create as jest.Mock).mockResolvedValue({
         id: 'order-id',
@@ -142,7 +148,7 @@ describe('AutomationService', () => {
 
       const result = await service.syncOrder({
         userPhone: '244999000',
-        items: [{ productId: 'p1', quantity: 2 }],
+        items: [{ productId: 'p1', quantity: '2' }],
         deliveryZone: 'KK5000',
         paymentMethod: 'APPYPAY',
       });

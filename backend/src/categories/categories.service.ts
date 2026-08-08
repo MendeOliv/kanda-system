@@ -39,7 +39,7 @@ export class CategoriesService {
       where: { id },
       include: {
         products: {
-          where: { status: 'active' },
+          where: { status: 'ACTIVE' },
           orderBy: { name: 'asc' },
         },
         _count: { select: { products: true } },
@@ -58,7 +58,7 @@ export class CategoriesService {
       where: { slug },
       include: {
         products: {
-          where: { status: 'active' },
+          where: { status: 'ACTIVE' },
           orderBy: { name: 'asc' },
         },
       },

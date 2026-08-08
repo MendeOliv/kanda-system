@@ -34,7 +34,7 @@ export class GeminiProvider {
       throw new Error('Gemini Provider not configured');
     }
 
-    const prompt = `Extrai os produtos e quantidades desta lista de compras angolana. 
+    const prompt = this.configService.get<string>('GEMINI_SHOPPING_PROMPT') ?? `Extrai os produtos e quantidades desta lista de compras angolana. 
 Responde APENAS com um array JSON válido. 
 Cada item deve ter obrigatoriamente as chaves: "name" (string), "quantity" (número), "unit" (string ou null).
 Exemplo de saída: [{"name": "Arroz Sol 25kg", "quantity": 2, "unit": "un"}, {"name": "Óleo Fula 5L", "quantity": 1, "unit": "un"}]

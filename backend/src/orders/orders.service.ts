@@ -1,9 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
-import { Prisma } from '@prisma/client';
-import { randomUUID } from 'crypto';
+import { Zone, PaymentMethod, OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
@@ -11,90 +8,90 @@ export class OrdersService {
 
   constructor(private prisma: PrismaService) {}
 
-  /** Resolve delivery fee from the database-baked DeliveryZone. */
-  private async resolveDeliveryFee(zoneName: string): Promise<{
-    fee: number;
-    zoneId: string | null;
-    minOrderValue: number;
-  }> {
-    const zone = await this.prisma.deliveryZone.findFirst({
-      where: { name: zoneName, active: true },
+  private async resolveUser(identifier: string) {
+    // Aceita quer o id interno, quer o firebaseUid
+    let user = await this.prisma.user.findUnique({
+      where: { firebaseUid: identifier },
     });
-
-    if (!zone) {
-      // Fallback for legacy / unrecognised zones
-      throw new BadRequestException(`Delivery zone "${zoneName}" not found or inactive.`);
+    if (!user) {
+      user = await this.prisma.user.findUnique({ where: { id: identifier } });
     }
-
-    return {
-      fee: Number(zone.fee),
-      zoneId: zone.id,
-      minOrderValue: Number(zone.minOrderValue),
-    };
+    return user;
   }
 
-  async create(createOrderDto: CreateOrderDto, userId?: string) {
-    if (!userId) {
-      throw new BadRequestException('User authentication required');
+  private async generateOrderNumber(): Promise<string> {
+    let orderNumber = '';
+    let exists = true;
+    while (exists) {
+      orderNumber = `KL-${Math.floor(1000 + Math.random() * 9000)}`;
+      const existing = await this.prisma.order.findUnique({ where: { orderNumber } });
+      exists = !!existing;
+    }
+    return orderNumber;
+  }
+
+  private normalizeZone(zone: string): Zone {
+      const normalized = String(zone || '').trim().toUpperCase();
+      return normalized === 'KILAMBA' ? Zone.KILAMBA : Zone.KK5000;
     }
 
-    const user = await this.prisma.user.findFirst({
-      where: { firebaseUid: userId, deletedAt: null },
+    private normalizePaymentMethod(method: string): PaymentMethod {
+      const m = String(method || 'CASH').toUpperCase();
+      return m === 'APPYPAY' ? PaymentMethod.APPYPAY : PaymentMethod.CASH;
+    }
+
+  private async addTracking(orderId: string, status: string, description: string) {
+    return this.prisma.trackingHistory.create({
+      data: { orderId, status, description },
     });
+  }
 
-    if (!user) {
-      throw new NotFoundException('User not found. Please complete registration.');
+  async create(createOrderDto: any, identifier?: string) {
+    if (!identifier) {
+      throw new BadRequestException('Autenticação de utilizador necessária');
     }
 
-    const productIds = createOrderDto.items.map(i => i.productId);
+    const user = await this.resolveUser(identifier);
+    if (!user) {
+      throw new NotFoundException('Utilizador não encontrado');
+    }
+
+    const productIds = createOrderDto.items.map((i: any) => i.productId);
     const products = await this.prisma.product.findMany({
-      where: { id: { in: productIds }, status: 'ACTIVE' },
+      where: { id: { in: productIds } },
     });
 
     if (products.length !== productIds.length) {
-      throw new BadRequestException('One or more products are invalid or inactive');
+      throw new BadRequestException('Um ou mais produtos são inválidos ou inativos');
     }
 
-    const productMap = new Map(products.map(p => [p.id, p]));
+    const productMap = new Map(products.map((p) => [p.id, p]));
+        const itemsData: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
+        let subtotal = 0;
 
-    const orderItemsData: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
-    let subtotal = 0;
+        for (const item of createOrderDto.items) {
+          const product = productMap.get(item.productId)!;
+          const price = product.discountPrice || product.price;
+          subtotal += Number(price) * item.quantity;
+          itemsData.push({
+            productId: item.productId,
+            quantity: item.quantity,
+            price,
+          });
+        }
 
-    for (const item of createOrderDto.items) {
-      const product = productMap.get(item.productId)!;
-      if (product.stock < item.quantity) {
-        throw new BadRequestException(
-          `Insufficient stock for product ${product.name}. Available: ${product.stock}, requested: ${item.quantity}`,
-        );
-      }
-
-      const lineTotal = Number(product.price) * item.quantity;
-      subtotal += lineTotal;
-
-      orderItemsData.push({
-        productId: item.productId,
-        quantity: item.quantity,
-        productNameSnapshot: product.name,
-        unitPriceSnapshot: product.price,
-      });
-    }
-
-    const { fee: deliveryFee, zoneId, minOrderValue } =
-      await this.resolveDeliveryFee(createOrderDto.deliveryZone);
-
-    if (subtotal < minOrderValue) {
-      throw new BadRequestException(
-        `Minimum order value for this zone is ${minOrderValue} Kz. Your subtotal is ${subtotal} Kz.`,
-      );
-    }
-
+    const zone = this.normalizeZone(createOrderDto.deliveryZone);
+    const deliveryFee = subtotal >= 10000 ? 0 : 500;
     const totalAmount = subtotal + deliveryFee;
+    const orderNumber = await this.generateOrderNumber();
+    const paymentMethod = this.normalizePaymentMethod(createOrderDto.paymentMethod);
 
-    const orderNumber = `KND-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    this.logger.log(
+      `Criando pedido ${orderNumber} — zone=${zone} fee=${deliveryFee} subtotal=${subtotal} total=${totalAmount}`,
+    );
 
-    this.logger.log(`Creating order ${orderNumber} — zone=${createOrderDto.deliveryZone} fee=${deliveryFee} subtotal=${subtotal} total=${totalAmount}`);
-
-    return this.prisma.$transaction(async (tx) => {
+    const order = await this.prisma.$transaction(async (tx) => {
+      // Decrementar stock
       for (const item of createOrderDto.items) {
         await tx.product.update({
           where: { id: item.productId },
@@ -102,133 +99,97 @@ export class OrdersService {
         });
       }
 
-      const order = await tx.order.create({
+      const created = await tx.order.create({
         data: {
           orderNumber,
           userId: user.id,
-          deliveryZoneId: zoneId,
-          deliveryReference: createOrderDto.deliveryReference,
           addressId: createOrderDto.addressId,
-          paymentMethod: createOrderDto.paymentMethod,
+          zone,
+          deliveryReference: createOrderDto.deliveryReference || 'N/A',
+          paymentMethod,
           deliveryFee,
           subtotal,
           totalAmount,
-          status: 'PENDING',
-          paymentStatus: 'PENDING',
-          notes: createOrderDto.notes,
-          items: {
-            create: orderItemsData,
-          },
+          status: OrderStatus.PENDING,
+                    paymentStatus: PaymentStatus.PENDING,
+                    notes: createOrderDto.notes,
+          items: { create: itemsData },
         },
-        include: {
-          items: { include: { product: true } },
-          user: { select: { id: true, phone: true, firstName: true } },
-        },
+        include: { items: { include: { product: true } } },
       });
 
-      this.logger.log(`Order ${order.orderNumber} created successfully.`);
-
-      return order;
+      return created;
     });
+
+    await this.addTracking(order.id, 'PENDING', 'Pedido criado com sucesso');
+
+    return {
+      success: true,
+      order,
+      id: order.id,
+      orderNumber: order.orderNumber,
+      totalAmount,
+    };
   }
 
-  async findAll() {
-    return this.prisma.order.findMany({
-      include: {
-        items: { include: { product: true } },
-        user: { select: { id: true, phone: true, firstName: true } },
-        deliveryZone: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+  async findUserOrders(userId: string) {
+    const user = await this.resolveUser(userId);
+    if (!user) throw new NotFoundException('Utilizador não encontrado');
 
-  async findOne(id: string) {
-    const order = await this.prisma.order.findUnique({
-      where: { id },
-      include: {
-        items: { include: { product: true } },
-        user: { select: { id: true, phone: true, firstName: true, lastName: true } },
-        payment: true,
-        deliveryZone: true,
-      },
-    });
-
-    if (!order) {
-      throw new NotFoundException(`Order ${id} not found`);
-    }
-
-    return order;
-  }
-
-  async findByOrderNumber(orderNumber: string) {
-    const order = await this.prisma.order.findUnique({
-      where: { orderNumber },
-      include: {
-        items: { include: { product: true } },
-        user: { select: { id: true, phone: true, firstName: true } },
-        deliveryZone: true,
-      },
-    });
-
-    if (!order) {
-      throw new NotFoundException(`Order ${orderNumber} not found`);
-    }
-
-    return order;
-  }
-
-  async findByUser(userId: string) {
-    const user = await this.prisma.user.findFirst({
-      where: { firebaseUid: userId, deletedAt: null },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return this.prisma.order.findMany({
+    const orders = await this.prisma.order.findMany({
       where: { userId: user.id },
-      include: {
-        items: { include: { product: true } },
-        deliveryZone: true,
-      },
+      include: { items: true, trackingHistory: { orderBy: { date: 'desc' } } },
       orderBy: { createdAt: 'desc' },
     });
+    return { orders };
   }
 
-  async update(id: string, updateOrderDto: UpdateOrderDto) {
-    const order = await this.prisma.order.findUnique({ where: { id } });
+  async findOne(identifier: string, id: string) {
+    const user = await this.resolveUser(identifier);
+    if (!user) throw new NotFoundException('Utilizador não encontrado');
 
-    if (!order) {
-      throw new NotFoundException(`Order ${id} not found`);
-    }
-
-    return this.prisma.order.update({
-      where: { id },
-      data: updateOrderDto as Prisma.OrderUpdateInput,
-      include: {
-        items: true,
-        user: { select: { id: true, phone: true } },
-        deliveryZone: true,
-      },
+    const order = await this.prisma.order.findFirst({
+      where: { id, userId: user.id },
+      include: { items: true, trackingHistory: { orderBy: { date: 'desc' } } },
     });
+    if (!order) throw new NotFoundException('Pedido não encontrado');
+    return { order };
   }
 
-  async remove(id: string) {
-    return this.cancel(id);
-  }
+  async cancel(identifier: string, id: string) {
+    const user = await this.resolveUser(identifier);
+    if (!user) throw new NotFoundException('Utilizador não encontrado');
 
-  async cancel(id: string) {
-    const order = await this.prisma.order.findUnique({ where: { id } });
+    const order = await this.prisma.order.findFirst({ where: { id, userId: user.id } });
+    if (!order) throw new NotFoundException('Pedido não encontrado');
+    if (order.status === 'CANCELLED') throw new BadRequestException('Pedido já cancelado');
 
-    if (!order) {
-      throw new NotFoundException(`Order ${id} not found`);
-    }
-
-    return this.prisma.order.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
+    await this.prisma.$transaction(async (tx) => {
+      // Repor stock
+      for (const item of await tx.orderItem.findMany({ where: { orderId: id } })) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
+      await tx.order.update({ where: { id }, data: { status: 'CANCELLED' } });
     });
+
+    await this.addTracking(id, 'CANCELLED', 'Pedido cancelado pelo utilizador');
+    return { success: true };
+  }
+
+  async tracking(identifier: string, id: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: { trackingHistory: { orderBy: { date: 'desc' } } },
+    });
+    if (!order) throw new NotFoundException('Pedido não encontrado');
+
+    return {
+      status: order.status,
+      orderNumber: order.orderNumber,
+      history: order.trackingHistory,
+    };
   }
 }

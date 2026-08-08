@@ -5,6 +5,7 @@ import { OrdersService } from '../orders/orders.service';
 import { PaymentsService } from '../payments/payments.service';
 import { GeminiProvider } from './providers/gemini.provider';
 import { GoogleVisionProvider } from './providers/google-vision.provider';
+import { SyncOrderRequestDto, OrderItemDto } from './dto';
 
 export interface LlmItem {
   name: string;
@@ -144,27 +145,29 @@ export class AutomationService {
     return items;
   }
 
-  async syncOrder(data: any) {
+  async syncOrder(data: SyncOrderRequestDto) {
     const { userPhone, items, deliveryZone, paymentMethod } = data;
     
     if (!userPhone || !items || !Array.isArray(items) || items.length === 0) {
       throw new BadRequestException('Invalid order data: userPhone and items are required');
     }
 
-    let user = await this.prisma.user.findUnique({ where: { phone: userPhone } });
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          phone: userPhone,
-          firebaseUid: `wa:${userPhone}`,
-          role: 'USER',
-          status: 'ACTIVE'
-        }
-      });
-    }
+    const user = await this.prisma.user.upsert({
+      where: { phone: userPhone },
+      update: {}, // mantém dados existentes
+      create: {
+        phone: userPhone,
+        firebaseUid: `wa:${userPhone}`,
+        role: 'USER',
+        status: 'ACTIVE',
+      },
+    });
 
     const order = await this.ordersService.create({
-      items: items.map((i: any) => ({ productId: i.productId, quantity: i.quantity })),
+      items: items.map((i: OrderItemDto) => ({ 
+        productId: i.productId, 
+        quantity: parseInt(i.quantity, 10) 
+      })),
       deliveryZone,
       paymentMethod: paymentMethod || 'CASH',
       deliveryReference: data.deliveryReference || ''

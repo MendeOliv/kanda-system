@@ -1,0 +1,86 @@
+{
+  "name": "WhatsApp Shopping List — OCR → LLM → Catálogo → Pedido",
+  "nodes": [
+    {
+      "name": "Trigger: WhatsApp Message",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "path": "whatsapp-shopping-list",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "description": "Recebe o payload do WAHA quando um utilizador envia uma foto ou mensagem de texto via WhatsApp."
+    },
+    {
+      "name": "Extract Image & Phone",
+      "type": "n8n-nodes-base.function",
+      "position": [500, 300],
+      "parameters": {
+        "functionCode": "// WAHA envia: { from: '2449XXXXXXXX', body: { type: 'image', url: '...' } }\n// ou { from: '...', body: { type: 'text', text: '2 arroz, 1 óleo' } }\nconst body = $json.body || $json;\nconst from = body.from || body._data?.from;\nconst msgBody = body.body || body._data?.body || body;\n\nlet text = null;\nlet imageUrl = null;\n\nif (msgBody.image?.url) {\n  imageUrl = msgBody.image.url;\n} else if (msgBody.text) {\n  text = msgBody.text;\n} else {\n  throw new Error('Mensagem sem texto ou imagem');\n}\n\nreturn { phone: from, text, imageUrl };"
+      }
+    },
+    {
+      "name": "Parse via Automation API",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [750, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "{{$env.API_URL}}/api/v1/automation/parse-shopping-list",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "text", "value": "={{ $json.text }}" },
+            { "name": "imageUrl", "value": "={{ $json.imageUrl }}" }
+          ]
+        }
+      },
+      "description": "Chama o backend: parse de texto via regex ou OCR/LLM se imagem → fuzzy search catálogo → retorna lista + preços."
+    },
+    {
+      "name": "Format WhatsApp Reply",
+      "type": "n8n-nodes-base.function",
+      "position": [1000, 300],
+      "parameters": {
+        "functionCode": "const data = $input.first().json;\nconst items = data.products || [];\nlet msg = '*🛒 Lista de Compras Kanda*\\n\\n';\n\nlet total = 0;\nfor (const item of items) {\n  const line = `- ${item.quantity}x ${item.name} = ${(item.price * item.quantity).toLocaleString()} Kz`;\n  msg += `${line}\\n`;\n  total += item.price * item.quantity;\n}\n\nmsg += `\\n💰 Total: ${total.toLocaleString()} Kz`;\n\nif (data.unrecognizedItems?.length > 0) {\n  msg += `\\n\\n⚠️ Não encontrado: ${data.unrecognizedItems.join(', ')}`;\n}\n\nreturn { phone: $('Extract').item.json.phone, message: msg, products: items, total };"
+      }
+    },
+    {
+      "name": "Send WhatsApp Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1250, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.WAHA_API_URL}}/api/v1/messages",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "to", "value": "={{ $json.phone }}" },
+            { "name": "message", "value": "={{ $json.message }}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Wait for Confirmation (TBD)",
+      "type": "n8n-nodes-base.wait",
+      "position": [1500, 300],
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "description": "Aguardar resposta do cliente (Sim/Não) para confirmar pedido. Webhook para POST /api/v1/automation/orders/sync."
+    }
+  ],
+  "connections": {
+    "Trigger: WhatsApp Message": { "main": [[{ "node": "Extract Data & Phone", "type": "main", "index": 0 }]] },
+    "Extract Data & Phone": { "main": [[{ "node": "Parse Kaskanda API", "type": "main", "index": 0 }]] },
+    "Parse Kanda API": { "main": [[{ "node": "Format WhatsApp Reply", "type": "main", "index": 0 }]] },
+    "Format WhatsApp Reply": { "main": [[{ "node": "Send WAHA Reply", "type": "main", "index": 0 }]] },
+    "Send WAHA Reply": { "main": [[{ "node": "Wait for Confirmation", "type": "main", "index": 0 }]] }
+  },
+  "env": {
+    "API_URL": "https://kanda-backend.onrender.com",
+    "WAHA_API_URL": "https://seu-waha.onrender.com"
+  }
+}

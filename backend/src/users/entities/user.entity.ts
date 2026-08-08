@@ -1,3 +1,5 @@
+import { UserRole } from '@prisma/client';
+
 export class UserEntity {
   id: string;
   firebaseUid: string;
@@ -5,7 +7,7 @@ export class UserEntity {
   firstName?: string;
   lastName?: string;
   email?: string;
-  role: string;
+  role: UserRole;
   status: string;
   createdAt: Date;
   updatedAt: Date;
