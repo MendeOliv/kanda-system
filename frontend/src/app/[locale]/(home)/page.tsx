@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
 
 const CATEGORIES = [
   { name: "Alimentares", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuA6aES_es26rB9FTlqKHm81GJ2PLOfU3ASjelKdpGpA0iGXSI-IQEtR01IlppeBDI1n3mYt9_mkZhq8uPbBdLy5nBrKWzaKpjGec626L9NfHNXLHq__-bk8JNf53dIcLYnOYdFj83X2aWNehLUJhtGdYU6gNMzn_BbdNfQiLRXjMwvQ5VgmbB4OijZWTOZ5J6LaW8S6C6xgKszN5vaD3DWMtZRnVZz0FpUsEv_YNMuoByKhZ7Aq2cAV" },
@@ -19,6 +20,7 @@ const PRODUCTS = [
 
 export default function HomePage() {
   const t = useTranslations("home");
+  const { locale } = useParams();
 
   return (
     <main className="max-w-container-max mx-auto px-gutter py-md space-y-xl pb-xl">
@@ -29,23 +31,31 @@ export default function HomePage() {
           <span className="bg-primary-container text-on-primary-container px-4 py-1 rounded-full font-label-md text-label-md self-start">{t("hero.badge")}</span>
           <h2 className="font-headline-xl text-headline-xl text-white max-w-xl">{t("hero.title")}</h2>
           <p className="font-body-lg text-body-lg text-white/90 max-w-lg">{t("hero.subtitle")}</p>
-          <a href="/mercado" className="bg-primary-container text-on-primary-container px-xl py-md rounded-lg font-label-md text-label-md w-fit hover:brightness-110 active:scale-95 transition-all inline-block">{t("hero.cta")}</a>
+          <Link href={`/${locale}/mercado`} className="bg-primary-container text-on-primary-container px-xl py-md rounded-lg font-label-md text-label-md w-fit hover:brightness-110 active:scale-95 transition-all inline-block">
+            {t("hero.cta")}
+          </Link>
         </div>
       </section>
 
       <section className="space-y-md">
         <div className="flex justify-between items-end">
           <h3 className="font-headline-md text-headline-md text-on-surface">{t("categories.title")}</h3>
-          <a href="/mercado" className="text-primary font-label-md text-label-md hover:underline">{t("categories.viewAll")}</a>
+          <Link href={`/${locale}/mercado`} className="text-primary font-label-md text-label-md hover:underline">
+            {t("categories.viewAll")}
+          </Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
           {CATEGORIES.map((cat) => (
-            <a key={cat.name} href={`/mercado?categoria=${cat.name.toLowerCase()}`} className="group cursor-pointer space-y-base text-center">
+            <Link
+              key={cat.name}
+              href={`/${locale}/mercado?categoria=${cat.name.toLowerCase()}`}
+              className="group cursor-pointer space-y-base text-center"
+            >
               <div className="aspect-square bg-surface-container rounded-xl overflow-hidden ambient-shadow transition-transform group-hover:scale-[1.02]">
                 <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${cat.image}')` }} />
               </div>
               <p className="font-label-md text-label-md text-on-surface">{t(`categoriesNames.${cat.name}`)}</p>
-            </a>
+            </Link>
           ))}
         </div>
       </section>
@@ -79,11 +89,17 @@ export default function HomePage() {
       <section className="space-y-md">
         <div className="flex justify-between items-center">
           <h3 className="font-headline-md text-headline-md text-on-surface">{t("featured.title")}</h3>
-          <a href="/mercado" className="text-primary font-label-md text-label-md hover:underline">{t("featured.viewAll")}</a>
+          <Link href={`/${locale}/mercado`} className="text-primary font-label-md text-label-md hover:underline">
+            {t("featured.viewAll")}
+          </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
           {PRODUCTS.map((p) => (
-            <a key={p.name} href="/produto/pao-de-agua-artesanal" className="bg-white rounded-xl p-md ambient-shadow product-card space-y-sm flex flex-col group hover:-translate-y-1 transition-all">
+            <Link
+              key={p.name}
+              href={`/${locale}/produto/pao-de-agua-artesanal`}
+              className="bg-white rounded-xl p-md ambient-shadow product-card space-y-sm flex flex-col group hover:-translate-y-1 transition-all"
+            >
               <div className="relative h-48 bg-surface-container-low rounded-lg overflow-hidden mb-sm">
                 <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500" style={{ backgroundImage: `url('${p.image}')` }} />
                 {p.discount && <span className="absolute top-2 left-2 bg-error text-white font-label-sm text-label-sm px-2 py-0.5 rounded">{p.discount}</span>}
@@ -96,11 +112,17 @@ export default function HomePage() {
                   <p className="text-primary font-headline-md text-headline-md">{p.price}</p>
                   {p.oldPrice && <p className="text-outline line-through text-label-sm">{p.oldPrice}</p>}
                 </div>
-                <button type="button" className="bg-primary text-on-primary p-2 rounded-full hover:shadow-lg active:scale-90 transition-all" onClick={(e) => { e.preventDefault(); }}>
+                <button
+                  type="button"
+                  className="bg-primary text-on-primary p-2 rounded-full hover:shadow-lg active:scale-90 transition-all"
+                  onClick={(e) => {
+                    e.preventDefault();
+                  }}
+                >
                   <span className="material-symbols-outlined">add_shopping_cart</span>
                 </button>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       </section>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
 const CATEGORIES = [
   { name: "Todos", count: 124 },
@@ -16,12 +17,13 @@ const PRODUCTS = [
   { name: "Pão de Luanda Especial", category: "Padaria", price: "450 Kz", stock: "12 unidades", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD3oLQVSLCdG-Hc-UhoWIxruyrQyJeMh-U3gPaBVptZmJ1sLLk0SfVzOTBmGgRWd1v3Esh627IPruKU2-HwXaJshrTdaKm_TMHwdgka6Qr6ewd3P6QTP2od0Jh4E5euFG-5UbDhOkjJrkOJobneqwRwjh6rODHeFFpGFzf2jnEktbAPQHjp01zBKoRaq4wVG9buZ28a2yho98vxI7WWGJGLUPQltcbRfqo7QfO4-DejiqX-8SzBm_-y" },
   { name: "Lombo de Novilho (Kg)", category: "Talho", price: "8.900 Kz", stock: "3 unidades", badge: "Esgotando", badgeType: "error", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAISF6Zbf7KedKMADLummrOq9QCNqEEGUg0s6i6w6k6A-OrGWfEJWvufByCr1dYXmMxkgkPp3E-VnXQCsvs7JFHD0yiyU5FcBa3__iDWks6ymtP3dlr8H5Yz_NozaQKzXAd6Da1KYuvGbp4AlbXt_v764GHPpWGGNVfaWmj51TLvZ-59rAcE1OjhtjQZjWAcJkfJ-e0A0Cz-TzwARLXkBHbKPmB17MS2GWjjdXpgponjFhcVInjVoQs" },
   { name: "Mel Puro de Malanje", category: "Mercearia", price: "3.500 Kz", stock: "15 unidades", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCTzxRu9y_IGHB26aPqNY63_IjEJBYCqLXeAfwses-tkkqC3vu3HGATgPsch0fMQpOuEVhulCiiYpyZtd2mCBerMiBXHJQKLCJI8OlS5-UsYsN4yp2UUeic3xt4bhNjQ64gYBA5zrmYxQTlbtzqlSQi0x1oJVbWh7qeZ8YfooW4IURhIhYh0jf6VSA4MmVGJK-ZbdVc0iKfCQI6eaZKyWUcxU1ntkLXhZcT-DSaeZcFtvwj2cnBy5F7" },
-  { name: "Cesto Mix Bio (Grande)", category: "Hortifrúti", price: "7.200 Kz", stock: "8 unidades", badge: "Orgânico", badgeType: "secondary", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCDfeueEpm1_ll-vDLT_qIymEj0u9d1wS0r4UzS7xV4vNjCRQKlCrPVV53H1zVlw_p6QgE3Yf2SI0I0GZBVp3sm65-CgVhFTLx48y9rjvLmfMAH1OYADTRskoKb6HaiVjs91Z1QMgvTMSEs-DaxM81Gk6GUbtJ4gZar9w8K5kQMXN45umPSP00ezzj7NxXMV-MIepPCY3SZ-AwCv2r71g1X0zf_A6H-7YEupQ33fXwkCzeE4ZA8StY8" },
+  { name: "Cesto Mix Bio (Grande)", category: "Hortifrúti", price: "7.200 Kz", stock: "8 unidades", badge: "Orgânico", badgeType: "secondary", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCDfeueEpm1_ll-vDLT_qIymEj0u9d1wS0r4UzS7xV4vNjCRQKlCrPVV53H1zVlw_p6QgE3Yf2SI0I0GZBVp3sm65-CgVhFTLx48y9rjvLmfMAH1OADTRskoKb6HaiVjs91Z1QMgvTMSEs-DaxM81Gk6GUbtJ4gZar9w8K5kQMXN45umPSP00ezzj7NxXMV-MIepPCY3SZ-AwCv2r71g1X0zf_A6H-7YEupQ33fXwkCzeE4ZA8StY8" },
   { name: "Sumo Natural Maracujá", category: "Bebidas", price: "1.200 Kz", stock: "22 unidades", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuC9Xo-fPymGg1LiXLKw2dyezNhrOEZRbXnHxKJSVWfto1ZXt_6v58snQCBYoVEWqhweUYld_nos5fihPtC1QgkJ6Klnq-953uZrNjflM3zrzjKT4IDabUIt7kjnLCLbbX6kn00_HXH2Ymv7N1GdE2rMhSfthruWoszxqpEouQ2KLTt3Tf-EFOAj1wUAS0DCTi7uSuNzzSU3Hw0_LUkl4fmFiYV-WITTIpg2GOXu_NON8hOre0qvqndM" },
 ];
 
 export default function MercadoPage() {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const { locale } = useParams();
 
   return (
     <main className="max-w-container-max mx-auto px-gutter py-xl flex gap-lg">
@@ -66,15 +68,23 @@ export default function MercadoPage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
           {PRODUCTS.map((p) => (
-            <Link key={p.name} href={`/produto/${p.name.toLowerCase().replace(/\s+/g, "-")}`} className="product-card group relative bg-surface-container-lowest rounded-xl p-md ambient-shadow flex flex-col gap-sm transition-all duration-300 hover:-translate-y-1">
+            <Link
+              key={p.name}
+              href={`/${locale}/produto/${p.name.toLowerCase().replace(/\s+/g, "-")}`}
+              className="product-card group relative bg-surface-container-lowest rounded-xl p-md ambient-shadow flex flex-col gap-sm transition-all duration-300 hover:-translate-y-1"
+            >
               <div className="relative overflow-hidden rounded-lg aspect-square mb-sm">
                 <div className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style={{ backgroundImage: `url('${p.image}')` }} />
                 {p.badge && (
                   <span className={`absolute top-3 left-3 font-label-sm px-3 py-1 rounded-full ${
-                    p.badgeType === "error" ? "bg-error text-on-error" :
-                    p.badgeType === "secondary" ? "bg-secondary-container text-on-secondary-container" :
-                    "bg-primary text-on-primary"
-                  }`}>{p.badge}</span>
+                    p.badgeType === "error"
+                      ? "bg-error text-on-error"
+                      : p.badgeType === "secondary"
+                      ? "bg-secondary-container text-on-secondary-container"
+                      : "bg-primary text-on-primary"
+                  }`}>
+                    {p.badge}
+                  </span>
                 )}
               </div>
               <div className="flex flex-col flex-1">
@@ -87,7 +97,13 @@ export default function MercadoPage() {
                   </div>
                 </div>
               </div>
-              <button type="button" className="w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 mt-md shadow-lg shadow-primary/20" onClick={(e) => { e.preventDefault(); }}>
+              <button
+                type="button"
+                className="w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 mt-md shadow-lg shadow-primary/20"
+                onClick={(e) => {
+                  e.preventDefault();
+                }}
+              >
                 <span className="material-symbols-outlined">add_shopping_cart</span>
                 Adicionar
               </button>
