@@ -15,3 +15,4 @@ const nextConfig = {
 };
 
 export default withNextIntl(nextConfig, { localePrefix: 'always' });
+// trivial change to trigger Vercel rebuild
