@@ -5,16 +5,18 @@ import {
   initializeApp,
   getApps,
 } from 'firebase/app';
-import type { FirebaseApp } from '@firebase/app';
+import type { FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPhoneNumber,
+} from 'firebase/auth';
+import type {
   ConfirmationResult,
   UserCredential,
   IdTokenResult,
   User as FirebaseUser
 } from 'firebase/auth';
-import type { Auth } from '@firebase/auth';
+import type { Auth } from 'firebase/auth';
 
 // Configuration interface
 interface FirebaseConfig {
@@ -128,31 +130,29 @@ async function getFirebase(): Promise<{ app: FirebaseApp; auth: Auth }> {
   }
 
   try {
-    // Import Firebase modules dynamically (for better code splitting)
-    const [{ getAuth: getAuthFn }] = await Promise.all([
-      import('firebase/app'),
-      import('firebase/auth')
-    ]);
+      // Import Firebase modules dynamically (for better code splitting)
+      const firebaseApp = await import('firebase/app');
+      const firebaseAuth = await import('firebase/auth');
 
-    const firebaseConfig = getFirebaseConfig();
-    app = getApps().length === 0 
-      ? initializeApp(firebaseConfig) 
-      : getApps()[0];
-    auth = getAuthFn(app);
+      const firebaseConfig = getFirebaseConfig();
+      app = firebaseApp.getApps().length === 0
+        ? firebaseApp.initializeApp(firebaseConfig)
+        : firebaseApp.getApps()[0];
+      auth = firebaseAuth.getAuth(app);
 
-    return { app, auth };
-  } catch (error: any) {
-    if (shouldUseMockMode()) {
-      console.warn('Firebase unavailable; using local mock mode for development.', error?.message);
-      // Return mock objects in development
-      return { 
-        app: {} as FirebaseApp, 
-        auth: {} as Auth 
-      } as { app: FirebaseApp; auth: Auth };
+      return { app, auth };
+    } catch (error: any) {
+      if (shouldUseMockMode()) {
+        console.warn('Firebase unavailable; using local mock mode for development.', error?.message);
+        // Return mock objects in development
+        return {
+          app: {} as FirebaseApp,
+          auth: {} as Auth
+        } as { app: FirebaseApp; auth: Auth };
+      }
+      throw error;
     }
-    throw error;
   }
-}
 
 // Persist Firebase user to localStorage
 function persistAuthUser(user: FirebaseUser | null): void {

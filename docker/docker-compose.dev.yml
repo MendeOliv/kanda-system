@@ -72,7 +72,7 @@ services:
     networks:
       - kanda-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/v1/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -121,6 +121,9 @@ services:
     environment:
       WHATSAPP_RESTART_ALL_FAILED_SESSION: "false"
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-kanda-waha-token-dev}
+      WAHA_SESSION_NAME: ${WAHA_SESSION_NAME:-default}
+      WAHA_API_KEY: ${WAHA_API_KEY:-kanda-waha-api-key-dev}
     ports:
       - "8000:3000"
     volumes:
@@ -129,11 +132,29 @@ services:
     networks:
       - kanda-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/status || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ping || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # Next.js Frontend (Development)
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: kanda-frontend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/public:/app/public
+    depends_on:
+      - backend
+    networks:
+      - kanda-network
 
 networks:
   kanda-network:

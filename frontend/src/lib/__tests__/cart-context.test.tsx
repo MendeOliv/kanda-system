@@ -15,7 +15,7 @@ describe('Cart Context', () => {
 
   it('should add item to cart', () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    const testItem = { id: 1, name: 'Test Product', price: 10, qty: 2 };
+    const testItem = { id: 1, name: 'Test Product', price: 10, qty: 2, image: '' };
 
     act(() => {
       result.current.addItem(testItem);
@@ -29,7 +29,7 @@ describe('Cart Context', () => {
 
   it('should update quantity', () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    const testItem = { id: 1, name: 'Test Product', price: 10, qty: 1 };
+    const testItem = { id: 1, name: 'Test Product', price: 10, qty: 1, image: '' };
 
     act(() => {
       result.current.addItem(testItem);
@@ -43,7 +43,7 @@ describe('Cart Context', () => {
 
   it('should not allow quantity below 1', () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    const testItem = { id: 1, name: 'Test Product', price: 10, qty: 1 };
+    const testItem = { id: 1, name: 'Test Product', price: 10, qty: 1, image: '' };
 
     act(() => {
       result.current.addItem(testItem);
@@ -55,7 +55,7 @@ describe('Cart Context', () => {
 
   it('should remove item from cart', () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    const testItem = { id: 1, name: 'Test Product', price: 10, qty: 2 };
+    const testItem = { id: 1, name: 'Test Product', price: 10, qty: 2, image: '' };
 
     act(() => {
       result.current.addItem(testItem);
@@ -69,8 +69,8 @@ describe('Cart Context', () => {
 
   it('should clear cart', () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    const testItem1 = { id: 1, name: 'Product 1', price: 10, qty: 1 };
-    const testItem2 = { id: 2, name: 'Product 2', price: 20, qty: 3 };
+    const testItem1 = { id: 1, name: 'Product 1', price: 10, qty: 1, image: '' };
+    const testItem2 = { id: 2, name: 'Product 2', price: 20, qty: 3, image: '' };
 
     act(() => {
       result.current.addItem(testItem1);
@@ -87,11 +87,11 @@ describe('Cart Context', () => {
     // Suppress console.error for expected error
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     
-    const { result } = renderHook(() => useCart(), {
-      wrapper: ({ children }) => children, // No provider
-    });
-
-    expect(() => result.current).toThrow('useCart must be used within a CartProvider');
+    expect(() =>
+      renderHook(() => useCart(), {
+        wrapper: ({ children }) => children, // No provider
+      })
+    ).toThrow('useCart must be used within a CartProvider');
     
     spy.mockRestore();
   });
