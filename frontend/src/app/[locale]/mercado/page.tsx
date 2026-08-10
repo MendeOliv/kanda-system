@@ -1,126 +1,174 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
+import Link from "next/link";
+import { useCart } from "@/lib/cart-context";
 
-const CATEGORIES = [
-  { name: "Todos", count: 124 },
-  { name: "Hortifrúti", count: 45 },
-  { name: "Padaria", count: 22 },
-  { name: "Talho", count: 18 },
-  { name: "Bebidas", count: 39 },
-];
+interface Product {
+  id: number;
+  brand: string;
+  name: string;
+  price: number;
+  priceLabel: string;
+  oldPrice?: string;
+  image: string;
+  badge?: { label: string; tone: "promo" | "soldout" };
+  soldOut?: boolean;
+}
 
-const PRODUCTS = [
-  { name: "Laranjas da Huíla (Kg)", category: "Hortifrúti", price: "1.250 Kz", stock: "45 unidades", badge: "Destaque", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCpEFTO40cUFroevzfzbE3ERnlD6p6kVsiq-fn43j8ldP3O9woK8hVP5Xz3DInKR7zROyQQCavOMJUQ5GmRSqkdDg1wpq77os366NR5CAyMUF9lvnjKw7wQT6CK4vMmQkurSqOa5fQ0geX_noYjfNYxgYN5w1Lz_ZSfqUUl96zigIO2rL76Ck4Ay4jv5UOridbjSwWK7lGLPxodI6XGtkFQ0LGGmhYburmeoCvPFurglNBoweJNOvpV" },
-  { name: "Pão de Luanda Especial", category: "Padaria", price: "450 Kz", stock: "12 unidades", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD3oLQVSLCdG-Hc-UhoWIxruyrQyJeMh-U3gPaBVptZmJ1sLLk0SfVzOTBmGgRWd1v3Esh627IPruKU2-HwXaJshrTdaKm_TMHwdgka6Qr6ewd3P6QTP2od0Jh4E5euFG-5UbDhOkjJrkOJobneqwRwjh6rODHeFFpGFzf2jnEktbAPQHjp01zBKoRaq4wVG9buZ28a2yho98vxI7WWGJGLUPQltcbRfqo7QfO4-DejiqX-8SzBm_-y" },
-  { name: "Lombo de Novilho (Kg)", category: "Talho", price: "8.900 Kz", stock: "3 unidades", badge: "Esgotando", badgeType: "error", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAISF6Zbf7KedKMADLummrOq9QCNqEEGUg0s6i6w6k6A-OrGWfEJWvufByCr1dYXmMxkgkPp3E-VnXQCsvs7JFHD0yiyU5FcBa3__iDWks6ymtP3dlr8H5Yz_NozaQKzXAd6Da1KYuvGbp4AlbXt_v764GHPpWGGNVfaWmj51TLvZ-59rAcE1OjhtjQZjWAcJkfJ-e0A0Cz-TzwARLXkBHbKPmB17MS2GWjjdXpgponjFhcVInjVoQs" },
-  { name: "Mel Puro de Malanje", category: "Mercearia", price: "3.500 Kz", stock: "15 unidades", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCTzxRu9y_IGHB26aPqNY63_IjEJBYCqLXeAfwses-tkkqC3vu3HGATgPsch0fMQpOuEVhulCiiYpyZtd2mCBerMiBXHJQKLCJI8OlS5-UsYsN4yp2UUeic3xt4bhNjQ64gYBA5zrmYxQTlbtzqlSQi0x1oJVbWh7qeZ8YfooW4IURhIhYh0jf6VSA4MmVGJK-ZbdVc0iKfCQI6eaZKyWUcxU1ntkLXhZcT-DSaeZcFtvwj2cnBy5F7" },
-  { name: "Cesto Mix Bio (Grande)", category: "Hortifrúti", price: "7.200 Kz", stock: "8 unidades", badge: "Orgânico", badgeType: "secondary", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCDfeueEpm1_ll-vDLT_qIymEj0u9d1wS0r4UzS7xV4vNjCRQKlCrPVV53H1zVlw_p6QgE3Yf2SI0I0GZBVp3sm65-CgVhFTLx48y9rjvLmfMAH1OADTRskoKb6HaiVjs91Z1QMgvTMSEs-DaxM81Gk6GUbtJ4gZar9w8K5kQMXN45umPSP00ezzj7NxXMV-MIepPCY3SZ-AwCv2r71g1X0zf_A6H-7YEupQ33fXwkCzeE4ZA8StY8" },
-  { name: "Sumo Natural Maracujá", category: "Bebidas", price: "1.200 Kz", stock: "22 unidades", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuC9Xo-fPymGg1LiXLKw2dyezNhrOEZRbXnHxKJSVWfto1ZXt_6v58snQCBYoVEWqhweUYld_nos5fihPtC1QgkJ6Klnq-953uZrNjflM3zrzjKT4IDabUIt7kjnLCLbbX6kn00_HXH2Ymv7N1GdE2rMhSfthruWoszxqpEouQ2KLTt3Tf-EFOAj1wUAS0DCTi7uSuNzzSU3Hw0_LUkl4fmFiYV-WITTIpg2GOXu_NON8hOre0qvqndM" },
+const PRODUCTS: Product[] = [
+  { id: 1, brand: "Tio Lucas", name: "Arroz Agulha Extra Longo 5Kg", price: 5200, priceLabel: "5.200 Kz", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCM__VufmPH7expfaUPpXDHhai57lEsfVndez9uQm6BBsSq7UXT7hqfvno8kDI-_coMNFlXxS2rfUWqgvmKOYbIU0pBpgQHA_gGJfC2SHmeEnVjeaiFLLYoGbdTZIUF421oIXuW-brTF-kCSqNvkuFNAFUwfiOjOT-uLJmHvRaPXU2YLKgqHNpo_PsaUO1b_Twi9Qf6WVvTfk5JkyfTTAahBlqNc8MWKgt3svvGedQKwOTWgwQdf_Ny" },
+  { id: 2, brand: "Fula", name: "Óleo Alimentar Fula 1L", price: 1850, priceLabel: "1.850 Kz", oldPrice: "2.100 Kz", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDLoUkm1WV5FQHk7uVah_uw-yhEKBCpqiBFtEvFddQpeXMYvIqxMpgyuejo2E1-G1NyOM0wi2TPQKlr5EMBAkudNTkMhBAF8qjTsLrbaETuBdG7OLsUnKCgLI_WlS7C6ZITYt3_EwTr3wBqyjyUTATEmwwCg9AsI2qzkHcHZ1xnK_1b-cJvKBWM5dOTX2ljU-2TvdkyS7yI_BLgpc0hV2-KOxJnwuhBx-I2CCj8STiek-Csi1tGsSb6", badge: { label: "Promoção", tone: "promo" } },
+  { id: 3, brand: "Bom Petisco", name: "Atum em Azeite Bom Petisco 120g", price: 950, priceLabel: "950 Kz", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDQcrM9-QXSAFY5sHK6RSGwCWEuLUchMlMn10QciPcUETggRrZqhZ6ujjjp6Zn3Z2-YtKomMUU-121XFxnN1XvGozKzIaQ6EAw0yhtPUDOeVpbrPWTu98C-xibiatyeS7qpAtW3DCGoy3ALqw1tM_zBKs-lfzERr4y8MBWeIO3Puwa9t7qePtNFbxAeh2oYDKf6eaddbE6lZbl3-RZmbxteFPAtxyxAU2dVP2ZZ2TZLaS0GkzALtTtv", badge: { label: "Esgotado", tone: "soldout" }, soldOut: true },
+  { id: 4, brand: "Nacional", name: "Feijão Preto Nacional 1Kg", price: 1400, priceLabel: "1.400 Kz", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuC9aoJfEzuflJJS_U-91JIxxKEj5hePV-lZ72BkowYVw8OOLHaUBZ4xEbM9u5tA5S6VndFovKysF-gVQPi8xEYV-NlxUoZ7m83TajCKbTGHsGepAPkEEYFH398lBHk4ih5JyUSO91YSgy9b2boi2dAyOBahdRRHSr5KrBAwBiLUnKDr9lvzfxCVrvowPWqSWPNg9AZ6H0MNR3vXWWKadvIuo1VyEx2mnz6Fa-OSiu5YS-swC1NbJctt" },
+  { id: 5, brand: "Milaneza", name: "Esparguete Milaneza 500g", price: 650, priceLabel: "650 Kz", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDg3QbCrQXTcet_AeyPmcVpqUrLSBJbP0asIHLZ8YWvS90cYr7yeOPTggSbRJg0W2qUpB553zNOlZ-e7PX3w5Xs7-IcAoy057RQssBFZI6N-o5zyc7b2b6PZSGFB65rtFSTYzTRKu8PvMzuDIQxnqh6lRbKDZl92Uy61N6HkTTsbpsQrE7QHb3fv1-R7APto_Q44-o2nveShQRHxdFn-YggpFKMGNzf3CwZCjfozsJKlfyBOhST5d5r" },
+  { id: 6, brand: "AngoDoce", name: "Açúcar Branco AngoDoce 2Kg", price: 2100, priceLabel: "2.100 Kz", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDF1Ost9e4uN8Ck0P9U0igcQLqG4NENqkEVMt7gskdlZxcmgsg2-EETcSOxojl9KWfzxpxF8pnbQY-EtygaTZSa9D1wHdL_Z4hkKTPJeej4CRYd81x1SjragWXk9iti62Y8gTyKQ6eTnyEQt6gEVyNolQb9nmOhjZaSkhxs-L8QDFSzbQ3-MKTcTO5IRnGZa9-p1i9hDztizZ0oWlWJG508Y5HjMAKVNEqswAqhSP0mYsWJ5JBXF3ju" },
 ];
 
 export default function MercadoPage() {
-  const [selectedCategory, setSelectedCategory] = useState("Todos");
   const { locale } = useParams();
+  const { addItem } = useCart();
 
   return (
-    <main className="max-w-container-max mx-auto px-gutter py-xl flex gap-lg">
-      <aside className="w-64 flex-shrink-0 hidden md:block">
-        <div className="bg-surface-container-lowest p-md rounded-xl ambient-shadow flex flex-col gap-md sticky top-32">
-          <h2 className="font-headline-md text-headline-md text-on-surface border-b border-surface-container-high pb-sm">Filtros</h2>
-          <div>
-            <h3 className="font-label-md text-label-md text-outline uppercase tracking-wider mb-sm">Categorias</h3>
-            <ul className="flex flex-col gap-xs">
-              {CATEGORIES.map((cat) => (
-                <li
-                  key={cat.name}
-                  onClick={() => setSelectedCategory(cat.name)}
-                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
-                    selectedCategory === cat.name
-                      ? "bg-primary-container/10 text-primary font-bold"
-                      : "text-on-surface-variant hover:bg-surface-container-low"
-                  }`}
-                >
-                  <span className="font-body-md text-body-md">{cat.name}</span>
-                  <span className="font-label-sm text-label-sm">{cat.count}</span>
+    <main className="flex-1 w-full max-w-[1440px] mx-auto px-container-margin py-xl flex flex-col md:flex-row gap-xl relative">
+      {/* Left Sidebar (Filters) */}
+      <aside className="hidden md:block w-64 shrink-0 space-y-xl sticky top-24 h-fit">
+        <div className="text-secondary font-body-sm text-body-sm mb-lg">
+          <Link href={`/${locale}/`} className="hover:text-primary transition-colors">Início</Link>
+          <span> &gt; </span>
+          <span className="font-label-bold text-on-surface">Alimentares</span>
+        </div>
+        <div className="bg-surface-container-lowest rounded-lg p-md soft-shadow-level-1 border border-surface-variant">
+          <div className="flex items-center gap-sm mb-md pb-xs border-b border-surface-variant">
+            <span className="material-symbols-outlined text-primary">filter_list</span>
+            <h2 className="font-h3 text-h3 text-on-surface">Filtros</h2>
+          </div>
+
+          <div className="mb-lg">
+            <h3 className="font-label-bold text-label-bold text-on-surface-variant mb-sm">Sub-categorias</h3>
+            <ul className="space-y-sm font-body-sm text-body-sm text-on-surface">
+              {["Arroz & Massas", "Óleos & Azeites", "Enlatados & Conservas", "Farinhas & Cereais"].map((c, i) => (
+                <li key={c}>
+                  <label className="flex items-center gap-xs cursor-pointer hover:text-primary transition-colors">
+                    <input defaultChecked={i === 0} className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox" />
+                    {c}
+                  </label>
                 </li>
               ))}
             </ul>
           </div>
-          <div>
-            <h3 className="font-label-md text-label-md text-outline uppercase tracking-wider mb-sm">Preço (Kz)</h3>
-            <input className="w-full h-1 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary" max="50000" min="0" type="range" />
+
+          <div className="mb-lg">
+            <h3 className="font-label-bold text-label-bold text-on-surface-variant mb-sm">Preço (Kz)</h3>
+            <div className="flex items-center gap-sm">
+              <input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Min" type="number" />
+              <span className="text-outline-variant">-</span>
+              <input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Max" type="number" />
+            </div>
           </div>
-          <button className="mt-base w-full py-3 bg-secondary text-on-secondary rounded-lg font-label-md hover:bg-secondary/90 transition-all active:scale-95">
-            Limpar Filtros
-          </button>
+
+          <div>
+            <h3 className="font-label-bold text-label-bold text-on-surface-variant mb-sm">Marca</h3>
+            <ul className="space-y-sm font-body-sm text-body-sm text-on-surface">
+              {["Tio Lucas", "Fula", "Bom Petisco"].map((m) => (
+                <li key={m}>
+                  <label className="flex items-center gap-xs cursor-pointer hover:text-primary transition-colors">
+                    <input className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox" />
+                    {m}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </aside>
 
-      <section className="flex-1">
-        <div className="flex justify-between items-end mb-lg">
+      {/* Product Grid Area */}
+      <section className="flex-1 w-full flex flex-col">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-lg gap-md">
           <div>
-            <h2 className="font-headline-xl text-headline-xl text-on-surface">Produtos Frescos</h2>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-xs">Encontrados 124 produtos para você</p>
+            <h1 className="font-h1 text-h1 text-on-surface">Alimentares</h1>
+            <p className="font-body-md text-body-md text-secondary mt-base">Mostrando 24 de 156 produtos</p>
+          </div>
+          <div className="flex items-center gap-xs">
+            <span className="font-body-sm text-body-sm text-secondary">Ordenar por:</span>
+            <select className="bg-surface-container-lowest border border-outline-variant rounded-lg py-xs pl-sm pr-lg font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary soft-shadow-level-1 cursor-pointer">
+              <option>Relevância</option>
+              <option>Preço: Menor ao Maior</option>
+              <option>Preço: Maior ao Menor</option>
+              <option>Mais Vendidos</option>
+            </select>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
+
+        {/* Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-gutter md:gap-md">
           {PRODUCTS.map((p) => (
-            <Link
-              key={p.name}
-              href={`/${locale}/produto/${p.name.toLowerCase().replace(/\s+/g, "-")}`}
-              className="product-card group relative bg-surface-container-lowest rounded-xl p-md ambient-shadow flex flex-col gap-sm transition-all duration-300 hover:-translate-y-1"
+            <article
+              key={p.id}
+              className="bg-surface-container-lowest rounded-lg soft-shadow-level-1 overflow-hidden flex flex-col relative group border border-transparent hover:border-outline-variant transition-all duration-200"
             >
-              <div className="relative overflow-hidden rounded-lg aspect-square mb-sm">
-                <div className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style={{ backgroundImage: `url('${p.image}')` }} />
-                {p.badge && (
-                  <span className={`absolute top-3 left-3 font-label-sm px-3 py-1 rounded-full ${
-                    p.badgeType === "error"
-                      ? "bg-error text-on-error"
-                      : p.badgeType === "secondary"
-                      ? "bg-secondary-container text-on-secondary-container"
-                      : "bg-primary text-on-primary"
-                  }`}>
-                    {p.badge}
-                  </span>
-                )}
+              {p.badge && (
+                <div
+                  className={`absolute top-xs left-xs z-10 font-label-bold text-[10px] px-xs py-[2px] rounded-full uppercase tracking-wider soft-shadow-level-1 ${
+                    p.badge.tone === "promo"
+                      ? "bg-primary-fixed text-on-primary-fixed"
+                      : "bg-error text-on-error"
+                  }`}
+                >
+                  {p.badge.label}
+                </div>
+              )}
+              <div className="h-48 w-full bg-surface-container-high relative overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src={p.image} alt={p.name} />
               </div>
-              <div className="flex flex-col flex-1">
-                <span className="font-label-sm text-label-sm text-outline uppercase mb-xs">{p.category}</span>
-                <h3 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">{p.name}</h3>
-                <div className="mt-auto pt-sm flex justify-between items-end">
-                  <div>
-                    <span className="font-headline-md text-headline-md text-primary font-bold">{p.price}</span>
-                    <span className="font-label-sm text-label-sm text-tertiary block">{p.stock}</span>
+              <div className="p-sm flex-1 flex flex-col">
+                <span className="font-body-sm text-body-sm text-on-surface-variant uppercase tracking-wide text-[10px] mb-base">{p.brand}</span>
+                <h3 className="font-body-md text-body-md text-on-surface line-clamp-2 leading-tight">{p.name}</h3>
+                <div className="mt-auto pt-sm flex flex-col gap-sm">
+                  <div className="flex items-center gap-xs">
+                    <span className="font-price-display text-price-display text-primary">{p.priceLabel}</span>
+                    {p.oldPrice && (
+                      <span className="font-body-sm text-body-sm text-outline-variant line-through text-[12px]">{p.oldPrice}</span>
+                    )}
                   </div>
+                  {p.soldOut ? (
+                    <button className="w-full h-[48px] bg-surface-variant text-secondary rounded-lg flex items-center justify-center gap-xs font-label-bold text-label-bold cursor-not-allowed" disabled>
+                      <span className="material-symbols-outlined text-[20px]">notifications</span> Avisar-me
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => addItem({ id: p.id, name: p.name, price: p.price, qty: 1, image: p.image })}
+                      className="w-full h-[48px] bg-primary text-on-primary rounded-lg flex items-center justify-center gap-xs font-label-bold text-label-bold hover:bg-surface-tint active:scale-95 transition-all"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">add</span> Adicionar
+                    </button>
+                  )}
                 </div>
               </div>
-              <button
-                type="button"
-                className="w-full bg-primary text-on-primary py-3 rounded-lg font-label-md flex items-center justify-center gap-2 mt-md shadow-lg shadow-primary/20"
-                onClick={(e) => {
-                  e.preventDefault();
-                }}
-              >
-                <span className="material-symbols-outlined">add_shopping_cart</span>
-                Adicionar
-              </button>
-            </Link>
+            </article>
           ))}
         </div>
 
-        <div className="mt-xl flex justify-center items-center gap-sm">
-          <button type="button" className="p-2 rounded-lg hover:bg-surface-container-low text-outline disabled:opacity-30" disabled>
+        {/* Pagination */}
+        <div className="mt-xl flex justify-center items-center gap-sm font-body-md text-body-md">
+          <button className="p-xs text-secondary hover:bg-surface-container-low rounded flex items-center justify-center disabled:opacity-50">
             <span className="material-symbols-outlined">chevron_left</span>
           </button>
-          <button type="button" className="w-10 h-10 rounded-lg bg-primary text-on-primary font-label-md">1</button>
-          <button type="button" className="w-10 h-10 rounded-lg hover:bg-surface-container-low text-on-surface-variant font-label-md">2</button>
-          <button type="button" className="w-10 h-10 rounded-lg hover:bg-surface-container-low text-on-surface-variant font-label-md">3</button>
-          <span className="w-10 h-10 flex items-center justify-center text-outline">...</span>
-          <button type="button" className="w-10 h-10 rounded-lg hover:bg-surface-container-low text-on-surface-variant font-label-md">12</button>
-          <button type="button" className="p-2 rounded-lg hover:bg-surface-container-low text-primary">
+          {[1, 2, 3].map((n) => (
+            <button
+              key={n}
+              className={`w-8 h-8 flex items-center justify-center rounded-full font-label-bold ${
+                n === 1 ? "bg-primary text-on-primary" : "text-secondary hover:bg-surface-container-low transition-colors"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+          <span className="text-outline-variant">...</span>
+          <button className="w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-surface-container-low transition-colors">8</button>
+          <button className="p-xs text-secondary hover:bg-surface-container-low rounded flex items-center justify-center">
             <span className="material-symbols-outlined">chevron_right</span>
           </button>
         </div>

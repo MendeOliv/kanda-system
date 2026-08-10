@@ -1,92 +1,83 @@
-const INFORMATIVE = [
-  {
-    icon: "security",
-    title: "Proteção de Dados",
-    body: "Implementamos medidas de segurança técnicas e organizativas para proteger os seus dados contra acesso não autorizado, alteração, divulgação ou destruição acidental.",
-  },
-  {
-    icon: "database",
-    title: "Dados Recolhidos",
-    list: [
-      "Informações de contacto (nome, email, telefone).",
-      "Dados de entrega (morada).",
-      "Histórico de compras e preferências.",
-    ],
-  },
-];
+import Link from "next/link";
 
 const RIGHTS = [
-  { icon: "visibility", title: "Acesso", body: "Direito de solicitar cópia dos seus dados." },
-  { icon: "edit", title: "Retificação", body: "Direito de corrigir dados inexatos." },
-  { icon: "delete", title: "Apagamento", body: "Direito ao 'esquecimento' dos dados." },
+  { icon: "visibility", title: "Acesso", desc: "Direito de solicitar cópia dos seus dados." },
+  { icon: "edit", title: "Retificação", desc: "Direito de corrigir dados inexatos." },
+  { icon: "delete", title: "Apagamento", desc: 'Direito ao "esquecimento" dos dados.' },
 ];
 
 export default function PrivacidadePage() {
   return (
-    <main className="max-w-container-max mx-auto px-gutter py-lg flex flex-col gap-lg min-h-screen">
-      <header className="text-center flex flex-col gap-sm pb-lg border-b border-outline-variant/30">
-        <h1 className="font-headline-xl text-headline-xl text-primary">Política de Privacidade</h1>
-        <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-          Na Kanda, valorizamos a sua confiança. Esta página explica como recolhemos, usamos e protegemos os seus dados pessoais.
+    <main className="flex-grow w-full max-w-4xl mx-auto px-container-margin py-xl flex flex-col gap-xl">
+      <div className="text-center">
+        <h1 className="font-h1 text-h1 text-primary">Política de Privacidade</h1>
+        <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mt-sm">
+          A sua privacidade é importante para nós. Explicamos aqui como recolhemos, utilizamos e protegemos os seus dados pessoais.
         </p>
-        <div className="mt-md">
-          <button type="button" className="inline-flex items-center gap-xs bg-secondary text-on-secondary px-lg py-sm rounded-lg hover:bg-on-secondary-container transition-colors shadow-sm">
-            <span className="material-symbols-outlined">download</span>
-            <span className="font-label-md text-label-md">Download PDF</span>
-          </button>
+        <div className="mt-md flex justify-center">
+          <Link href="/" className="inline-flex items-center gap-xs bg-secondary text-on-secondary px-lg py-sm rounded-lg hover:bg-on-secondary-container transition-colors shadow-sm font-label-bold text-label-bold">
+            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+            Voltar
+          </Link>
         </div>
-      </header>
+      </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-lg">
-        {INFORMATIVE.map((item) => (
-          <div key={item.title} className="bg-surface-container-lowest p-lg rounded-xl ambient-shadow border border-outline-variant/20 flex flex-col gap-md">
-            <div className="flex items-center gap-sm text-primary">
-              <span className="material-symbols-outlined text-3xl">{item.icon}</span>
-              <h2 className="font-headline-md text-headline-md">{item.title}</h2>
-            </div>
-            {item.body && <p className="font-body-md text-body-md text-on-surface-variant">{item.body}</p>}
-            {item.list && (
-              <ul className="font-body-md text-body-md text-on-surface-variant list-disc list-inside space-y-2">
-                {item.list.map((li) => (
-                  <li key={li}>{li}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
+      {/* Proteção de Dados */}
+      <section className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex gap-md">
+        <span className="material-symbols-outlined text-3xl text-primary shrink-0">security</span>
+        <div>
+          <h2 className="font-h3 text-h3 text-on-surface mb-sm">Proteção de Dados</h2>
+          <p className="font-body-md text-body-md text-on-surface-variant">
+            Utilizamos medidas técnicas e organizativas adequadas para proteger os seus dados contra acesso não autorizado, alteração, divulgação ou destruição.
+          </p>
+        </div>
       </section>
 
-      <section className="bg-surface-container p-lg rounded-xl flex flex-col gap-md">
-        <h2 className="font-headline-md text-headline-md text-primary border-b border-outline-variant/30 pb-xs">Os Seus Direitos</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-md mt-sm">
-          {RIGHTS.map((right) => (
-            <div key={right.title} className="flex items-start gap-sm">
-              <span className="material-symbols-outlined text-secondary mt-1">{right.icon}</span>
-              <div>
-                <h3 className="font-label-md text-label-md text-on-surface">{right.title}</h3>
-                <p className="font-body-md text-body-md text-on-surface-variant">{right.body}</p>
-              </div>
+      {/* Dados Recolhidos */}
+      <section className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex gap-md">
+        <span className="material-symbols-outlined text-3xl text-primary shrink-0">database</span>
+        <div>
+          <h2 className="font-h3 text-h3 text-on-surface mb-sm">Dados Recolhidos</h2>
+          <ul className="font-body-md text-body-md text-on-surface-variant list-disc list-inside space-y-2">
+            <li>Informações de contacto (nome, email, telefone).</li>
+            <li>Dados de entrega (morada).</li>
+            <li>Histórico de compras e preferências.</li>
+          </ul>
+        </div>
+      </section>
+
+      {/* Direitos */}
+      <section>
+        <h2 className="font-h2 text-h2 text-primary border-b border-outline-variant/30 pb-xs mb-md">Os Seus Direitos</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
+          {RIGHTS.map((r) => (
+            <div key={r.title} className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex flex-col gap-sm">
+              <span className="material-symbols-outlined text-secondary mt-1" style={{ fontSize: "28px" }}>{r.icon}</span>
+              <h3 className="font-label-bold text-label-bold text-on-surface">{r.title}</h3>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">{r.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="flex flex-col gap-md">
-        <h2 className="font-headline-md text-headline-md text-primary">Cookies e Rastreio</h2>
+      {/* Cookies */}
+      <section className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30">
+        <h2 className="font-h2 text-h2 text-primary mb-sm">Cookies e Rastreio</h2>
         <p className="font-body-md text-body-md text-on-surface-variant">
-          Utilizamos cookies para melhorar a sua experiência, personalizar conteúdo e analisar o nosso tráfego. Pode gerir as suas preferências de cookies a qualquer momento nas definições do seu navegador.
+          Utilizamos cookies essenciais para o funcionamento do site e cookies analíticos para melhorar a sua experiência. Pode gerir as preferências de cookies no seu navegador a qualquer momento.
         </p>
       </section>
 
-      <section className="bg-primary-container/10 p-lg rounded-xl border border-primary-container/30 flex flex-col gap-md">
-        <h2 className="font-headline-md text-headline-md text-on-primary-container">Contacto do Encarregado de Proteção de Dados (DPO)</h2>
-        <p className="font-body-md text-body-md text-on-surface-variant">
-          Se tiver dúvidas sobre esta política ou sobre como tratamos os seus dados, contacte o nosso DPO:
+      {/* DPO */}
+      <section className="bg-primary-fixed rounded-xl p-lg border border-primary-fixed-dim">
+        <h2 className="font-h3 text-h3 text-on-primary-container">Contacto do Encarregado de Proteção de Dados (DPO)</h2>
+        <p className="font-body-md text-body-md text-on-primary-container mt-sm">
+          Para questões relacionadas com a proteção dos seus dados pessoais, contacte-nos.
         </p>
-        <div className="flex items-center gap-sm mt-xs">
+        <a className="mt-md inline-flex items-center gap-xs font-label-bold text-label-bold text-primary hover:underline" href="mailto:dpo@kandaluanda.ao">
           <span className="material-symbols-outlined text-primary">mail</span>
-          <a className="font-label-md text-label-md text-primary hover:underline" href="mailto:dpo@kandaluanda.ao">dpo@kandaluanda.ao</a>
-        </div>
+          dpo@kandaluanda.ao
+        </a>
       </section>
     </main>
   );

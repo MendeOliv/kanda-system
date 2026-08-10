@@ -1,87 +1,75 @@
-const CARDS = [
-  {
-    icon: "calendar_month",
-    iconBg: "bg-primary-container text-on-primary-container",
-    title: "Prazo de 7 Dias",
-    body: "Tem 7 dias a partir da data de receção para solicitar a devolução de qualquer produto não perecível, sem necessidade de justificação complexa.",
-    span: "col-span-1",
-  },
-  {
-    icon: "inventory_2",
-    iconBg: "bg-secondary-container text-on-secondary-container",
-    title: "Condições de Devolução",
-    span: "lg:col-span-2",
-    list: [
-      "O artigo deve estar na embalagem original, intacta e não utilizada.",
-      "Os selos de segurança ou garantias de higiene não podem ter sido quebrados.",
-      "O recibo ou comprovativo de compra é obrigatório.",
-      "Produtos frescos ou perecíveis não são elegíveis, salvo defeito de qualidade detetado no ato da entrega.",
-    ],
-  },
-];
+import Link from "next/link";
 
 const STEPS = [
-  { number: "1", title: "Solicitar", body: "Contacte-nos via WhatsApp ou App em 7 dias.", active: true },
-  { number: "2", title: "Recolha", body: "O nosso estafeta recolhe no mesmo local da entrega.", active: false },
-  { number: "3", title: "Reembolso", body: "Processado em até 48h após aprovação técnica.", active: false },
+  { num: 1, title: "Solicitar", desc: "Contacte-nos via WhatsApp ou App em 7 dias." },
+  { num: 2, title: "Recolha", desc: "O nosso estafeta recolhe no mesmo local da entrega." },
+  { num: 3, title: "Reembolso", desc: "Processado em até 48h após aprovação técnica." },
 ];
 
 export default function DevolucoesPage() {
   return (
-    <main className="max-w-container-max mx-auto px-gutter py-lg flex flex-col gap-lg min-h-screen">
-      <section className="text-center max-w-3xl mx-auto">
-        <h1 className="font-headline-xl text-headline-xl text-primary mb-md">Política de Devoluções</h1>
-        <p className="font-body-lg text-body-lg text-on-surface-variant">Comprar na Kanda é simples e seguro. Se não ficar satisfeito, oferecemos um processo fácil e transparente.</p>
-      </section>
+    <main className="flex-grow w-full max-w-7xl mx-auto px-container-margin py-xl md:py-[48px] flex flex-col gap-xl">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="font-h1-mobile md:font-h1 text-h1-mobile md:text-h1 text-primary mb-md">Política de Devoluções</h1>
+        <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+          Comprar na Kanda Luanda é simples e seguro. Se não ficar satisfeito, oferecemos um processo fácil e transparente.
+        </p>
+      </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
-        {CARDS.map((card) => (
-          <div key={card.title} className={`bg-surface-container-lowest rounded-lg p-lg ambient-shadow flex flex-col items-start gap-md ${card.span}`}>
-            <div className={`${card.iconBg} p-sm rounded-full flex items-center justify-center`}>
-              <span className="material-symbols-outlined text-[32px]">{card.icon}</span>
-            </div>
-            <div>
-              <h3 className="font-headline-md text-headline-md text-on-surface mb-xs">{card.title}</h3>
-              {card.body && <p className="font-body-md text-body-md text-on-surface-variant">{card.body}</p>}
-              {card.list && (
-                <ul className="font-body-md text-body-md text-on-surface-variant list-disc pl-lg space-y-xs">
-                  {card.list.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        ))}
-      </section>
+      {/* Overview cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+        <div className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex flex-col gap-sm">
+          <span className="material-symbols-outlined text-[32px] text-primary">calendar_month</span>
+          <h3 className="font-h3 text-h3 text-on-background mb-xs">Prazo de 7 Dias</h3>
+          <p className="font-body-md text-body-md text-on-surface-variant">
+            Tem 7 dias a partir da data de receção para solicitar a devolução de qualquer produto não perecível, sem necessidade de justificação complexa.
+          </p>
+        </div>
 
-      <section className="bg-surface-container-low rounded-xl p-lg md:p-lg mt-md">
-        <h2 className="font-headline-md text-headline-md text-center text-on-surface mb-lg">Como Funciona o Processo</h2>
-        <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-lg md:gap-sm">
-          <div className="hidden md:block absolute top-1/2 left-0 w-full h-[2px] bg-outline-variant -translate-y-1/2 z-0" />
-          {STEPS.map((step) => (
-            <div key={step.title} className="relative z-10 flex flex-row md:flex-col items-center gap-md w-full md:w-1/3">
-              <div
-                className={`w-12 h-12 rounded-full font-headline-md text-headline-md flex items-center justify-center shadow-lg shrink-0 ${step.active ? "bg-primary text-on-primary" : "bg-surface-container-highest text-on-surface border-2 border-outline-variant"}`}
-              >
-                {step.number}
+        <div className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex flex-col gap-sm">
+          <span className="material-symbols-outlined text-[32px] text-primary">inventory_2</span>
+          <h3 className="font-h3 text-h3 text-on-background mb-xs">Condições de Devolução</h3>
+          <ul className="font-body-md text-body-md text-on-surface-variant list-disc pl-lg space-y-xs">
+            <li>O artigo deve estar na embalagem original, intacta e não utilizada.</li>
+            <li>Os selos de segurança ou garantias de higiene não podem ter sido quebrados.</li>
+            <li>O recibo ou comprovativo de compra é obrigatório.</li>
+            <li>Produtos frescos ou perecíveis não são elegíveis, salvo defeito de qualidade detetado no ato da entrega.</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Process */}
+      <section>
+        <h2 className="font-h2 text-h2 text-center text-on-background mb-xl">Como Funciona o Processo</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
+          {STEPS.map((s) => (
+            <div key={s.num} className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex flex-col items-start gap-sm">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-h2 text-h2 shrink-0 ${
+                s.num === 1 ? "bg-primary text-on-primary shadow-[0px_8px_24px_rgba(26,43,76,0.12)]" : "bg-surface-container-highest text-on-surface border-2 border-outline-variant"
+              }`}>
+                {s.num}
               </div>
-              <div className="md:text-center">
-                <h3 className="font-label-md text-label-md text-on-surface uppercase tracking-wide mb-xs">{step.title}</h3>
-                <p className="font-body-md text-body-md text-on-surface-variant">{step.body}</p>
-              </div>
+              <h3 className="font-label-bold text-label-bold text-on-background uppercase tracking-wide mb-xs">{s.title}</h3>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">{s.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="flex flex-col items-center justify-center py-lg gap-md text-center">
-        <h2 className="font-headline-md text-headline-md text-on-surface">Precisa de ajuda com uma devolução?</h2>
-        <p className="font-body-md text-body-md text-on-surface-variant max-w-lg mb-sm">A nossa equipa de apoio ao cliente está pronta para o ajudar no processo, de forma rápida e simpática.</p>
-        <a href="/contactos" className="bg-primary text-on-primary rounded-lg h-12 px-lg font-label-md text-label-md flex items-center gap-xs ambient-shadow hover:bg-on-primary-fixed-variant transition-colors active:scale-95">
-          <span className="material-symbols-outlined">support_agent</span>
-          Contactar Suporte
-        </a>
+      {/* CTA */}
+      <section className="text-center mt-md">
+        <h2 className="font-h3 text-h3 text-on-background">Precisa de ajuda com uma devolução?</h2>
+        <p className="font-body-md text-body-md text-on-surface-variant max-w-lg mx-auto mb-sm">
+          A nossa equipa de apoio ao cliente está pronta para o ajudar no processo, de forma rápida e simpática.
+        </p>
+        <Link
+          href="/contactos"
+          className="inline-flex items-center gap-xs bg-primary text-on-primary rounded-lg h-[48px] px-xl font-label-bold text-label-bold shadow-[0px_2px_8px_rgba(26,43,76,0.06)] hover:bg-on-primary-fixed-variant transition-colors active:scale-95"
+        >
+          <span className="material-symbols-outlined text-[20px]">support_agent</span>
+          Contactar Apoio
+        </Link>
       </section>
     </main>
   );

@@ -2,10 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
 
 :root {
   color-scheme: light;
+  --shadow-1: 0px 2px 8px rgba(26, 43, 76, 0.06);
+  --shadow-2: 0px 8px 24px rgba(26, 43, 76, 0.12);
 }
 
 * {
@@ -19,20 +22,116 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #fff8f5 0%, #fff2e9 48%, #f9eadf 100%);
-  color: #1e1b18;
-  font-family: 'Montserrat', sans-serif;
+  background: var(--color-background, #f9f9ff);
+  color: #111c2c;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: #904d00;
-  color: #ffffff;
+  background: #ff9800;
+  color: #653900;
 }
 
+/* ── Material Symbols ──────────────────────────── */
 .material-symbols-outlined {
+  font-family: 'Material Symbols Outlined', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
+.icon-filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
 
+/* ── Shadows (per design system) ──────────────── */
+.soft-shadow-level-1 {
+  box-shadow: 0px 2px 8px rgba(26, 43, 76, 0.06);
+}
+.soft-shadow-level-2 {
+  box-shadow: 0px 8px 24px rgba(26, 43, 76, 0.12);
+}
 .ambient-shadow {
-  box-shadow: 0 10px 30px -5px rgba(144, 77, 0, 0.08);
+  box-shadow: 0px 8px 24px rgba(26, 43, 76, 0.12);
+}
+.shadow-level-1 {
+  box-shadow: 0px 2px 8px rgba(26, 43, 76, 0.06);
+}
+
+/* ── Glass / utilitarian helpers ───────────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ── Hide scrollbar (admin tables etc) ─────────── */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── Animations ───────────────────────────────── */
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease both;
+}
+
+/* Expanded FAQ accordion content is revealed by toggling */
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.accordion-item.open .accordion-content {
+  max-height: 500px;
+}
+
+/* ── Scrollbar ────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #d8e3fa;
+  border-radius: 4px;
 }

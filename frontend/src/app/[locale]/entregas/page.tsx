@@ -1,129 +1,113 @@
-const DELIVERY_OPTIONS = [
-  {
-    icon: "local_shipping",
-    iconFrom: "bg-primary-container/20 text-primary",
-    title: "Entrega Standard",
-    body: "A nossa opção económica para as suas compras do dia-a-dia. Planeie com antecedência e receba as suas compras confortavelmente.",
-    timeIcon: "schedule",
-    time: "Até 48 horas",
-    price: "Desde 1.500 Kz",
-    featured: false,
-  },
-  {
-    icon: "bolt",
-    iconFrom: "bg-primary/10 text-primary",
-    title: "Entrega Express",
-    body: "Precisa urgente? Nós tratamos. Prioridade máxima na preparação e envio da sua encomenda diretamente para a sua porta.",
-    timeIcon: "timer",
-    time: "Até 2 horas (Kilamba)",
-    price: "Desde 3.000 Kz",
-    featured: true,
-  },
-];
+import Link from "next/link";
 
 const ZONES = [
-  { zone: "Zona 1", areas: "Centralidade do Kilamba, KK5000, Vila Flor", standard: "1.500 Kz", express: "3.000 Kz" },
-  { zone: "Zona 2", areas: "Talatona, Camama, Nova Vida, Benfica", standard: "2.500 Kz", express: "4.500 Kz" },
-  { zone: "Zona 3", areas: "Mutamba, Maculusso, Alvalade, Ingombota", standard: "3.500 Kz", express: "Não Disponível" },
-  { zone: "Zona 4", areas: "Viana, Cacuaco, Cazenga", standard: "4.500 Kz", express: "Não Disponível" },
-];
-
-const SUPPORT = [
-  { icon: "my_location", title: "Rastreio em Tempo Real", body: "Acompanhe a sua encomenda desde a nossa loja até à sua porta, diretamente na app ou site." },
-  { icon: "support_agent", title: "Apoio ao Cliente", body: "Dúvidas sobre a sua entrega? A nossa equipa está pronta para ajudar via WhatsApp ou chamada." },
+  { zone: "Zona 1", area: "Kilamba e arredores", fee: "1.500 Kz", grátis: "A partir de 10.000 Kz" },
+  { zone: "Zona 2", area: "KK5000 e Talatona", fee: "2.500 Kz", grátis: "A partir de 15.000 Kz" },
+  { zone: "Zona 3", area: "Outras zonas de Luanda", fee: "4.000 Kz", grátis: "A partir de 25.000 Kz" },
 ];
 
 export default function EntregasPage() {
   return (
-    <main className="max-w-container-max mx-auto px-gutter py-lg flex flex-col gap-lg min-h-screen">
-      <section className="text-center md:text-left max-w-3xl">
-        <h1 className="font-headline-xl text-headline-xl text-primary mb-md">Política de Entregas</h1>
-        <p className="font-body-lg text-body-lg text-on-surface-variant">
+    <main className="flex-grow w-full max-w-7xl mx-auto px-container-margin py-xl flex flex-col gap-xl">
+      {/* Header */}
+      <div className="md:text-center">
+        <h1 className="font-h1-mobile md:font-h1 text-h1-mobile md:text-h1 text-primary mb-md">Política de Entregas</h1>
+        <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
           Rápidas, seguras e de confiança. Saiba tudo sobre como os seus produtos chegam até si, com a qualidade que o seu vizinho de confiança garante.
         </p>
+      </div>
+
+      {/* Delivery types */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+        <div className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30">
+          <h2 className="font-h3 text-h3 text-on-surface mb-sm">Entrega Standard</h2>
+          <p className="font-body-sm text-body-sm text-on-surface-variant mb-md">
+            A nossa opção económica para as suas compras do dia-a-dia. Planeie com antecedência e receba as suas compras confortavelmente.
+          </p>
+          <span className="inline-flex items-center gap-xs bg-surface-container px-sm py-xs rounded-full font-label-bold text-label-bold text-on-surface">
+            <span className="material-symbols-outlined text-[20px]">schedule</span> Até 48 horas
+          </span>
+        </div>
+
+        <div className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30">
+          <h2 className="font-h3 text-h3 text-on-surface mb-sm">Entrega Express</h2>
+          <p className="font-body-sm text-body-sm text-on-surface-variant mb-md">
+            Precisa urgente? Nós tratamos. Prioridade máxima na preparação e envio da sua encomenda diretamente para a sua porta.
+          </p>
+          <span className="inline-flex items-center gap-xs bg-primary-container text-on-primary-container px-sm py-xs rounded-full font-label-bold text-label-bold">
+            <span className="material-symbols-outlined text-[20px]">timer</span> Até 2 horas (Kilamba)
+          </span>
+        </div>
+      </div>
+
+      {/* Free delivery banner */}
+      <div className="bg-primary rounded-xl p-lg flex flex-col md:flex-row items-center gap-md shadow-sm">
+        <span className="material-symbols-outlined text-[48px] text-white mb-sm">redeem</span>
+        <div className="flex-1 text-center md:text-left">
+          <h3 className="font-h2 text-h2 text-white mb-xs">Entregas Grátis</h3>
+          <p className="font-body-md text-body-md text-white/90 mb-md">Para compras superiores a <strong>10.000 Kz</strong></p>
+          <p className="font-body-sm text-body-sm text-white/70">*Válido apenas para a Zona 1 (Kilamba e arredores próximos).</p>
+        </div>
+      </div>
+
+      {/* Zones table */}
+      <section>
+        <h2 className="font-h3 text-h3 text-on-surface flex items-center gap-sm mb-md">
+          <span className="material-symbols-outlined text-primary">map</span>
+          Zonas de Entrega e Taxas
+        </h2>
+        <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
+          <table className="w-full text-left border-collapse min-w-[600px]">
+            <thead>
+              <tr className="bg-surface-container text-secondary font-label-bold border-b border-outline-variant/50">
+                <th className="p-md font-label-bold">Zona</th>
+                <th className="p-md font-label-bold">Área de Cobertura</th>
+                <th className="p-md font-label-bold">Taxa</th>
+                <th className="p-md font-label-bold">Entrega Grátis</th>
+              </tr>
+            </thead>
+            <tbody className="font-body-sm text-body-sm text-on-surface">
+              {ZONES.map((z) => (
+                <tr key={z.zone} className="border-b border-outline-variant/30 hover:bg-surface-container-low transition-colors">
+                  <td className="p-md font-label-bold">{z.zone}</td>
+                  <td className="p-md text-on-surface-variant">{z.area}</td>
+                  <td className="p-md">{z.fee}</td>
+                  <td className="p-md text-primary font-medium">{z.grátis}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-lg">
-        <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-md">
-          {DELIVERY_OPTIONS.map((option) => (
-            <div
-              key={option.title}
-              className={`bg-surface-container-lowest rounded-lg p-lg ambient-shadow flex flex-col justify-between ${option.featured ? "border-2 border-primary/20 relative overflow-hidden" : "border border-outline-variant/30"}`}
-            >
-              {option.featured && (
-                <div className="absolute top-0 right-0 bg-primary-container text-on-primary-container font-label-md text-label-md px-sm py-xs rounded-bl-lg">
-                  Recomendado
-                </div>
-              )}
-              <div>
-                <div className={`w-12 h-12 ${option.iconFrom} rounded-full flex items-center justify-center mb-sm`}>
-                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{option.icon}</span>
-                </div>
-                <h2 className="font-headline-md text-headline-md text-on-surface mb-xs">{option.title}</h2>
-                <p className="font-body-md text-body-md text-on-surface-variant mb-md">{option.body}</p>
-              </div>
-              <div>
-                <div className="flex items-center gap-xs font-label-md text-label-md text-on-surface mb-base">
-                  <span className="material-symbols-outlined text-[20px]">{option.timeIcon}</span> {option.time}
-                </div>
-                <div className="font-headline-md text-headline-md text-primary">{option.price}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="md:col-span-4 bg-primary rounded-lg p-lg ambient-shadow text-on-primary flex flex-col justify-center items-center text-center relative overflow-hidden">
-          <span className="material-symbols-outlined text-[48px] mb-sm" style={{ fontVariationSettings: "'FILL' 1" }}>redeem</span>
-          <h3 className="font-headline-md text-headline-md mb-xs">Entregas Grátis</h3>
-          <p className="font-body-md text-body-md mb-md">Para compras superiores a</p>
-          <div className="font-headline-xl text-headline-xl font-bold mb-md">25.000 Kz</div>
-          <p className="font-body-md text-body-md opacity-90">*Válido apenas para a Zona 1 (Kilamba e arredores próximos).</p>
-        </div>
-
-        <div className="md:col-span-12 bg-surface-container-lowest rounded-lg ambient-shadow overflow-hidden border border-outline-variant/30 mt-sm">
-          <div className="p-lg border-b border-outline-variant/30">
-            <h2 className="font-headline-md text-headline-md text-on-surface flex items-center gap-sm">
-              <span className="material-symbols-outlined text-primary">map</span>
-              Zonas e Tarifas
-            </h2>
+      {/* Extra features */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+        <div className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex flex-col gap-sm">
+          <div className="flex items-center gap-xs text-primary">
+            <span className="material-symbols-outlined text-[28px]">my_location</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-surface-container-low border-b border-outline-variant/50">
-                  <th className="p-md font-label-md text-label-md text-on-surface-variant">Zona</th>
-                  <th className="p-md font-label-md text-label-md text-on-surface-variant">Áreas Abrangidas</th>
-                  <th className="p-md font-label-md text-label-md text-on-surface-variant">Standard</th>
-                  <th className="p-md font-label-md text-label-md text-on-surface-variant">Express</th>
-                </tr>
-              </thead>
-              <tbody className="font-body-md text-body-md text-on-surface">
-                {ZONES.map((row) => (
-                  <tr key={row.zone} className="border-b border-outline-variant/20 hover:bg-surface-container/50 transition-colors">
-                    <td className="p-md font-bold">{row.zone}</td>
-                    <td className="p-md">{row.areas}</td>
-                    <td className="p-md">{row.standard}</td>
-                    <td className="p-md">{row.express}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <h3 className="font-label-bold text-label-bold text-on-surface mb-base">Rastreio em Tempo Real</h3>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">Acompanhe a sua encomenda desde a nossa loja até à sua porta, diretamente na app ou site.</p>
+        </div>
+        <div className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex flex-col gap-sm">
+          <div className="flex items-center gap-xs text-primary">
+            <span className="material-symbols-outlined text-[28px]">support_agent</span>
           </div>
+          <h3 className="font-label-bold text-label-bold text-on-surface mb-base">Apoio ao Cliente</h3>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">Dúvidas sobre a sua entrega? A nossa equipa está pronta para ajudar via WhatsApp ou chamada.</p>
         </div>
+      </div>
 
-        <div className="md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-lg mt-sm">
-          {SUPPORT.map((item) => (
-            <div key={item.title} className="flex items-start gap-md p-md bg-surface-container-low rounded-lg">
-              <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined">{item.icon}</span>
-              </div>
-              <div>
-                <h3 className="font-label-md text-label-md text-on-surface mb-base">{item.title}</h3>
-                <p className="font-body-md text-body-md text-on-surface-variant">{item.body}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* CTA */}
+      <div className="flex flex-col sm:flex-row gap-sm justify-center pt-md">
+        <Link href="/mercado" className="bg-primary text-on-primary font-label-bold h-12 px-xl rounded-lg flex items-center justify-center gap-xs hover:bg-surface-tint transition-colors">
+          <span className="material-symbols-outlined text-[20px]">local_mall</span>
+          Começar a Comprar
+        </Link>
+        <Link href="/perguntas-frequentes" className="bg-primary-container text-on-primary-container font-label-bold h-12 px-xl rounded-lg flex items-center justify-center gap-xs hover:bg-primary-fixed-dim transition-colors">
+          <span className="material-symbols-outlined text-[20px]">help</span>
+          Ver FAQ
+        </Link>
       </div>
     </main>
   );

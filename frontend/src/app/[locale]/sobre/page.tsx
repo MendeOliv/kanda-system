@@ -1,27 +1,6 @@
-const CARDS = [
-  {
-    icon: "flag",
-    iconBg: "bg-primary-container/20",
-    iconColor: "text-primary",
-    title: "Missão",
-    body: "Facilitar a vida das famílias angolanas através de um serviço de entrega rápido, fiável e com um toque humano inigualável.",
-  },
-  {
-    icon: "visibility",
-    iconBg: "bg-secondary-container/30",
-    iconColor: "text-secondary",
-    title: "Visão",
-    body: "Ser a plataforma de comércio local líder em Luanda, reconhecida por conectar a comunidade à conveniência moderna.",
-  },
-  {
-    icon: "favorite",
-    iconBg: "bg-tertiary-container/30",
-    iconColor: "text-tertiary",
-    title: "Valores",
-    body: null,
-    values: ["Confiança", "Rapidez", "Comunidade"],
-  },
-];
+import Link from "next/link";
+
+const VALUES = ["Confiança", "Rapidez", "Comunidade"];
 
 const STATS = [
   { value: "5k+", label: "Clientes Felizes" },
@@ -32,56 +11,73 @@ const STATS = [
 
 export default function SobrePage() {
   return (
-    <main className="min-h-screen">
-      <section
-        className="relative w-full h-[60vh] min-h-[400px] flex items-center justify-center bg-surface-container-highest"
-      >
-        <div
-          className="absolute inset-0 w-full h-full bg-cover bg-center opacity-80 mix-blend-overlay"
-          style={{
-            backgroundImage:
-              "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDMiabp0uMtPu4mWvQUM73VgydwLP5TpgN6_un7b3MCx32eA-2lbGcadCbUF4Bdki6YgshMO3SlnTAEZEBl_2b14xBvsvlbPrfegEPm4K4GW1fyoJKvQCqjsFtyhpGJEgpgjDJVos3h2slaHbBMRbN0WJKQyCTcmP-xjXVD1kv_q3iA1145RQIcfFFtvIXTNW2TrVu0kA8wsJbu9hD0UjkspJhG18douRKYG8XTM9r8LWqzNST-n6f')",
-          }}
-        />
-        <div className="relative z-10 text-center px-gutter max-w-3xl mx-auto">
-          <h1 className="font-headline-xl text-headline-xl text-on-surface mb-md">Nossa História</h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant">
+    <main className="flex-grow">
+      <section className="w-full max-w-7xl mx-auto px-container-margin py-xl flex flex-col gap-xl">
+        {/* Header */}
+        <div className="text-center space-y-sm">
+          <h1 className="font-h1 text-h1 md:text-5xl text-on-surface mb-md">Nossa História</h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
             O seu vizinho de confiança, enraizado no coração de Kilamba, entregando qualidade e hospitalidade angolana à sua porta.
           </p>
         </div>
-      </section>
 
-      <section className="py-lg px-gutter max-w-container-max mx-auto">
+        {/* Mission / Vision / Values */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
-          {CARDS.map((card) => (
-            <div key={card.title} className="bg-surface-container-lowest rounded-xl ambient-shadow p-lg flex flex-col h-full border border-outline-variant/30">
-              <div className={`w-12 h-12 rounded-full ${card.iconBg} flex items-center justify-center mb-md`}>
-                <span className={`material-symbols-outlined ${card.iconColor}`}>{card.icon}</span>
-              </div>
-              <h3 className="font-headline-md text-headline-md text-on-surface mb-sm">{card.title}</h3>
-              {card.body && <p className="font-body-md text-body-md text-on-surface-variant flex-grow">{card.body}</p>}
-              {card.values && (
-                <ul className="font-body-md text-body-md text-on-surface-variant space-y-2 flex-grow">
-                  {card.values.map((v) => (
-                    <li key={v} className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-sm text-primary">check_circle</span>{v}
-                    </li>
-                  ))}
-                </ul>
-              )}
+          <div className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex flex-col gap-sm">
+            <span className="material-symbols-outlined text-primary text-[40px]">flag</span>
+            <h3 className="font-h3 text-h3 text-on-surface mb-sm">Missão</h3>
+            <p className="font-body-md text-body-md text-on-surface-variant flex-grow">
+              Facilitar a vida das famílias angolanas através de um serviço de entrega rápido, fiável e com um toque humano inigualável.
+            </p>
+          </div>
+
+          <div className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex flex-col gap-sm">
+            <span className="material-symbols-outlined text-secondary text-[40px]">visibility</span>
+            <h3 className="font-h3 text-h3 text-on-surface mb-sm">Visão</h3>
+            <p className="font-body-md text-body-md text-on-surface-variant flex-grow">
+              Ser a plataforma de comércio local líder em Luanda, reconhecida por conectar a comunidade à conveniência moderna.
+            </p>
+          </div>
+
+          <div className="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30 flex flex-col gap-sm">
+            <span className="material-symbols-outlined text-tertiary text-[40px]">favorite</span>
+            <h3 className="font-h3 text-h3 text-on-surface mb-sm">Valores</h3>
+            <ul className="font-body-md text-body-md text-on-surface-variant space-y-2 flex-grow">
+              {VALUES.map((v) => (
+                <li key={v} className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm text-primary">check_circle</span> {v}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-md bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/30">
+          {STATS.map((s) => (
+            <div key={s.label} className="text-center">
+              <p className="font-h1 text-h1 text-primary">{s.value}</p>
+              <p className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider mt-xs">{s.label}</p>
             </div>
           ))}
         </div>
-      </section>
 
-      <section className="py-lg px-gutter max-w-container-max mx-auto relative overflow-hidden rounded-xl bg-gradient-to-br from-surface-container-high to-surface-container-low mb-lg">
-        <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-lg text-center py-lg">
-          {STATS.map((stat) => (
-            <div key={stat.label}>
-              <p className="font-headline-lg text-headline-lg text-primary">{stat.value}</p>
-              <p className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mt-xs">{stat.label}</p>
-            </div>
-          ))}
+        {/* CTA */}
+        <div className="flex flex-col sm:flex-row gap-sm justify-center pt-md">
+          <Link
+            href="/mercado"
+            className="bg-primary text-on-primary font-label-bold h-12 px-xl rounded-lg flex items-center justify-center gap-xs hover:bg-surface-tint transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">local_mall</span>
+            Ver Produtos
+          </Link>
+          <Link
+            href="/contactos"
+            className="bg-primary-container text-on-primary-container font-label-bold h-12 px-xl rounded-lg flex items-center justify-center gap-xs hover:bg-primary-fixed-dim transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">call</span>
+            Fale Connosco
+          </Link>
         </div>
       </section>
     </main>

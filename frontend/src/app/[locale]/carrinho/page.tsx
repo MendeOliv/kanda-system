@@ -1,121 +1,148 @@
 "use client";
 
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useParams, useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
-import { getDeliveryFee, type DeliveryZone } from "@/lib/delivery";
-import { formatCurrency } from "@/lib/utils";
-import type { AppLocale } from "@/i18n/routing";
+
+const formatKz = (n: number) => n.toLocaleString("pt-PT") + " Kz";
 
 export default function CarrinhoPage() {
-  const t = useTranslations("cart");
-  const tHeader = useTranslations("header");
-  const tDelivery = useTranslations("delivery");
-  const locale = useLocale() as AppLocale;
-  const { items, updateQty, removeItem, clearCart, subtotal } = useCart();
+  const { locale } = useParams();
+  const router = useRouter();
+  const { items, count, updateQty, removeItem, subtotal, clearCart } = useCart();
 
-  const deliveryZone: DeliveryZone = "KK5000";
-  const deliveryFee = getDeliveryFee(deliveryZone);
-  const discount = 300;
-  const total = subtotal + deliveryFee - discount;
+  const deliveryFee = subtotal > 0 ? 1500 : 0;
+  const total = subtotal + deliveryFee;
+
+  const handleCheckout = () => {
+    clearCart();
+    router.push(`/${locale}/pedido-confirmado`);
+  };
 
   return (
-    <main className="max-w-container-max mx-auto px-gutter py-lg">
-      <nav className="flex items-center gap-xs mb-md text-on-surface-variant font-label-sm text-label-sm">
-        <Link href="/" className="hover:text-primary transition-colors">{tHeader("home")}</Link>
-        <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span className="text-primary font-semibold">{t("breadcrumb")}</span>
-      </nav>
+    <main className="flex-grow w-full max-w-7xl mx-auto px-container-margin py-xl relative">
+      {/* Page Header */}
+      <div className="mb-lg">
+        <h1 className="font-h1 text-h1 text-on-surface">O Seu Carrinho</h1>
+        <p className="font-body-md text-body-md text-on-surface-variant mt-base">
+          Revise os seus itens antes de finalizar a encomenda.
+        </p>
+      </div>
 
-      <h2 className="font-headline-xl text-headline-xl mb-xl text-on-background">{t("title")}</h2>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg items-start">
-        <div className="lg:col-span-8 space-y-md">
-          <div className="bg-surface-container-lowest rounded-xl ambient-shadow overflow-hidden">
-            <div className="p-md bg-surface-container border-b border-outline-variant flex justify-between items-center">
-              <h3 className="font-headline-md text-headline-md text-on-surface">{t("selectedItems", { count: items.length })}</h3>
-              {items.length > 0 && (
-                <button type="button" onClick={() => clearCart()} className="text-error font-label-md text-label-md hover:underline flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-                  {t("clearAll")}
-                </button>
-              )}
-            </div>
-            {items.length === 0 ? (
-              <div className="p-xl text-center">
-                <span className="material-symbols-outlined text-6xl text-outline-variant mb-4">shopping_cart</span>
-                <p className="font-headline-md text-headline-md text-on-surface-variant">{t("empty.title")}</p>
-                <Link href="/mercado" className="mt-4 inline-block bg-primary text-on-primary px-8 py-3 rounded-lg font-label-md">{t("viewProducts")}</Link>
-              </div>
-            ) : (
-              <div className="divide-y divide-surface-container">
-                {items.map((item) => (
-                  <div key={item.id} className="p-md flex items-center gap-md group">
-                    <div className="w-24 h-24 rounded-lg bg-surface-container-low flex-shrink-0 overflow-hidden">
-                      <img className="w-full h-full object-cover" src={item.image} alt={item.name} />
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <h4 className="font-headline-md text-headline-md text-on-surface truncate">{item.name}</h4>
-                      <p className="text-on-surface-variant font-body-md text-body-md">{item.category}</p>
-                      <div className="flex items-center gap-md mt-2">
-                        <div className="flex items-center border border-outline rounded-lg px-2 py-1 bg-surface-container-lowest">
-                          <button type="button" onClick={() => updateQty(item.id, -1)} className="w-8 h-8 flex items-center justify-center text-primary hover:bg-surface-container transition-colors rounded-full">
-                            <span className="material-symbols-outlined text-[18px]">remove</span>
-                          </button>
-                          <span className="w-12 text-center font-bold text-on-surface">{item.qty}</span>
-                          <button type="button" onClick={() => updateQty(item.id, 1)} className="w-8 h-8 flex items-center justify-center text-primary hover:bg-surface-container transition-colors rounded-full">
-                            <span className="material-symbols-outlined text-[18px]">add</span>
-                          </button>
-                        </div>
-                        <button type="button" onClick={() => removeItem(item.id)} className="text-on-surface-variant hover:text-error transition-colors">
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-headline-md text-headline-md text-primary">{formatCurrency(item.price * item.qty, locale)}</p>
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center text-center py-xl gap-md bg-surface-container-lowest rounded-xl border border-outline-variant/30 p-xl">
+          <span className="material-symbols-outlined text-[64px] text-outline">shopping_cart</span>
+          <h2 className="font-h2 text-h2 text-on-surface">O seu carrinho está vazio</h2>
+          <p className="font-body-md text-body-md text-on-surface-variant max-w-md">
+            Explore a nossa seleção de produtos frescos e de qualidade.
+          </p>
+          <Link
+            href={`/${locale}/mercado`}
+            className="bg-primary text-on-primary font-label-bold h-12 px-xl rounded-lg flex items-center justify-center gap-xs hover:bg-surface-tint transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">local_mall</span>
+            Ver Produtos
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-xl items-start">
+          {/* Left Column: Product List */}
+          <div className="lg:col-span-8 flex flex-col gap-md">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="bg-surface-container-lowest rounded-lg shadow-[0px_2px_8px_rgba(26,43,76,0.06)] border border-outline-variant/30 p-md flex flex-col sm:flex-row items-start sm:items-center gap-md group hover:shadow-[0px_8px_24px_rgba(26,43,76,0.08)] transition-shadow duration-300"
+              >
+                <div className="w-full sm:w-28 h-28 shrink-0 bg-surface-container rounded-lg overflow-hidden relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="w-full h-full object-cover" src={item.image} alt={item.name} />
+                </div>
+                <div className="flex-1 flex flex-col gap-base min-w-0">
+                  <div className="flex justify-between items-start gap-sm">
+                    <h3 className="font-h3 text-h3 text-on-surface truncate">{item.name}</h3>
+                    <button
+                      aria-label="Remover item"
+                      onClick={() => removeItem(item.id)}
+                      className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-full hover:bg-error-container shrink-0"
+                    >
+                      <span className="material-symbols-outlined">delete</span>
+                    </button>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-secondary">Preço/Kg: {formatKz(item.price)}</p>
+                  <div className="flex items-center justify-between mt-sm">
+                    <span className="font-price-display text-price-display text-primary">{formatKz(item.price * item.qty)}</span>
+                    <div className="flex items-center bg-surface border border-outline-variant rounded-full h-[36px] overflow-hidden">
+                      <button
+                        className="w-8 h-full flex items-center justify-center text-secondary hover:bg-surface-variant hover:text-primary transition-colors active:bg-surface-dim"
+                        onClick={() => updateQty(item.id, -1)}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">remove</span>
+                      </button>
+                      <span className="w-10 text-center font-label-bold text-label-bold text-on-surface">{item.qty}</span>
+                      <button
+                        className="w-8 h-full flex items-center justify-center text-secondary hover:bg-surface-variant hover:text-primary transition-colors active:bg-surface-dim"
+                        onClick={() => updateQty(item.id, 1)}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">add</span>
+                      </button>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+            ))}
 
-        <aside className="lg:col-span-4 sticky top-[100px]">
-          <div className="bg-surface-container-lowest rounded-xl ambient-shadow p-md border border-outline-variant">
-            <h3 className="font-headline-md text-headline-md text-on-surface mb-md">{t("orderSummary")}</h3>
-            <p className="text-sm text-on-surface-variant mb-sm">{tDelivery(`zones.${deliveryZone}`)}</p>
-            <div className="space-y-sm mb-md">
-              <div className="flex justify-between text-on-surface-variant font-body-md text-body-md">
-                <span>{t("summary.subtotal")}</span>
-                <span>{formatCurrency(subtotal, locale)}</span>
-              </div>
-              <div className="flex justify-between text-on-surface-variant font-body-md text-body-md">
-                <span>{tDelivery("feeLabel")}</span>
-                <span>{formatCurrency(deliveryFee, locale)}</span>
-              </div>
-              <div className="flex justify-between text-secondary font-body-md text-body-md">
-                <span>{t("discounts")}</span>
-                <span>-{formatCurrency(discount, locale)}</span>
-              </div>
-            </div>
-            <div className="border-t border-dashed border-outline-variant py-md mb-md">
-              <div className="flex justify-between items-baseline">
-                <span className="font-headline-md text-headline-md text-on-surface">{t("summary.total")}</span>
-                <span className="font-headline-xl text-headline-xl text-primary">{formatCurrency(total, locale)}</span>
-              </div>
-            </div>
             <Link
-              href="/checkout"
-              className="w-full bg-primary-container text-on-primary-container font-headline-md text-headline-md py-4 rounded-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-md shadow-md"
+              href={`/${locale}/mercado`}
+              className="inline-flex items-center gap-xs text-primary font-label-bold text-label-bold hover:text-primary-fixed-dim transition-colors self-start"
             >
-              {t("summary.proceedToCheckout")}
-              <span className="material-symbols-outlined">arrow_forward</span>
+              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              Continuar a comprar
             </Link>
           </div>
-        </aside>
-      </div>
+
+          {/* Right Column: Order Summary */}
+          <div className="lg:col-span-4">
+            <div className="bg-surface-container-lowest rounded-xl shadow-[0px_8px_24px_rgba(26,43,76,0.06)] border border-outline-variant/40 p-lg lg:sticky lg:top-[100px] flex flex-col gap-md relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary-fixed/20 rounded-full blur-2xl pointer-events-none"></div>
+              <h2 className="font-h2 text-h2 text-on-surface mb-sm">Resumo do Pedido</h2>
+
+              <div className="flex flex-col gap-sm">
+                <div className="flex justify-between items-center">
+                  <span className="font-body-md text-body-md text-on-surface-variant">Subtotal ({count} itens)</span>
+                  <span className="font-body-md text-body-md text-on-surface font-medium">{formatKz(subtotal)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-body-md text-body-md text-on-surface-variant">Taxa de Entrega</span>
+                  <span className="font-body-md text-body-md text-primary font-medium">{formatKz(deliveryFee)}</span>
+                </div>
+              </div>
+
+              <hr className="border-outline-variant/40 my-xs" />
+
+              <div className="flex justify-between items-end mb-sm">
+                <span className="font-h3 text-h3 text-on-surface">Total</span>
+                <div className="text-right">
+                  <span className="font-body-sm text-body-sm text-secondary block mb-1">C/ IVA incluído</span>
+                  <span className="font-h1 text-h1 text-primary">{formatKz(total)}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCheckout}
+                className="w-full bg-primary text-on-primary rounded-lg py-[16px] mt-md font-label-bold text-label-bold flex items-center justify-center gap-xs hover:bg-on-primary-fixed-variant hover:shadow-[0px_8px_24px_rgba(139,80,0,0.2)] transition-all active:scale-[0.98]"
+              >
+                Finalizar Encomenda
+                <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+              </button>
+
+              <div className="flex items-center justify-center gap-sm mt-sm text-secondary opacity-80">
+                <span className="material-symbols-outlined text-[20px]">lock</span>
+                <span className="font-body-sm text-body-sm">Pagamento Seguro</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

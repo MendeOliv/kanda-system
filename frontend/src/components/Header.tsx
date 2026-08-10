@@ -18,88 +18,131 @@ export function Header({ showSearch }: HeaderProps) {
   const [user, setUser] = useState<any>(null);
   const { count } = useCart();
 
-  const navItems = [
-    { label: t("home"), href: "/" },
-    { label: t("market"), href: "/mercado" },
-    { label: t("orders"), href: "/pedidos" },
-  ];
-
   useEffect(() => {
     const syncUser = () => {
       const currentUser = getCurrentFirebaseUser();
       setUser(currentUser);
     };
-
     syncUser();
     window.addEventListener("storage", syncUser);
     return () => window.removeEventListener("storage", syncUser);
   }, []);
 
+  const navItems = [
+    { label: t("home"), href: "/", icon: "home" },
+    { label: t("market"), href: "/mercado", icon: "local_mall" },
+    { label: "Sobre Nós", href: "/sobre", icon: "info" },
+    { label: "Contactos", href: "/contactos", icon: "call" },
+  ];
+
   return (
-    <header className="bg-surface w-full top-0 sticky z-50">
-      <div className="flex justify-between items-center px-gutter py-base max-w-container-max mx-auto">
-        <Link href="/" className="flex items-center gap-base">
-          <span className="material-symbols-outlined text-primary text-headline-lg">storefront</span>
-          <h1 className="font-headline-lg text-headline-lg font-bold text-primary">{tBrand("name")}</h1>
+    <header className="w-full sticky top-0 z-50 shadow-sm bg-surface-container-lowest">
+      <div className="flex justify-between items-center px-container-margin py-md max-w-7xl mx-auto w-full">
+        {/* Brand */}
+        <Link href="/" className="font-h2 text-h2 text-primary shrink-0 flex items-center gap-xs">
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+            storefront
+          </span>
+          {tBrand("name")}
         </Link>
-        <nav className="hidden md:flex items-center gap-lg">
+
+        {/* Search Bar */}
+        {showSearch !== false && (
+          <div className="hidden md:flex flex-1 max-w-2xl px-lg">
+            <div className="relative flex items-center w-full h-12 rounded-full bg-surface-container border border-outline-variant focus-within:border-primary-container focus-within:ring-2 focus-within:ring-primary-container/20 transition-all overflow-hidden shadow-[0px_2px_8px_rgba(26,43,76,0.06)]">
+              <div className="pl-md text-secondary">
+                <span className="material-symbols-outlined">search</span>
+              </div>
+              <input
+                className="w-full h-full bg-transparent border-none focus:ring-0 text-on-surface font-body-md px-sm placeholder-secondary/70"
+                placeholder={t("searchPlaceholder")}
+                type="text"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Nav */}
+        <nav className="hidden lg:flex items-center gap-1 mx-auto">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 px-3 py-2 rounded-lg"
+              className="text-secondary font-body-md hover:bg-surface-container-low transition-colors px-md py-sm rounded-lg"
             >
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-md">
+
+        {/* Actions */}
+        <div className="flex items-center gap-sm shrink-0">
           <LanguageSwitcher />
+
+          {/* Cart */}
           <Link
             href="/carrinho"
-            className="relative p-2 rounded-full hover:bg-surface-container-low transition-colors active:scale-95 text-primary"
+            className="p-xs text-secondary hover:bg-surface-container-low transition-colors rounded-full relative"
             aria-label={t("cart")}
           >
             <span className="material-symbols-outlined">shopping_cart</span>
             {count > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-primary-container text-on-primary-container text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              <span className="absolute top-1 right-1 bg-primary-container text-on-primary-container font-label-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
                 {count}
               </span>
             )}
           </Link>
+
+          {/* Account */}
           <Link
-            href={user ? "/" : "/login"}
-            className="flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-surface-container-low active:scale-95 text-on-surface-variant"
+            href={user ? "/perfil" : "/login"}
+            className="p-xs text-secondary hover:bg-surface-container-low transition-colors rounded-full"
+            aria-label={t("account")}
           >
-            <span className="material-symbols-outlined">person</span>
-            <span className="text-sm font-medium">{user ? t("account") : t("login")}</span>
+            <span className="material-symbols-outlined">
+              {user ? "account_circle" : "person"}
+            </span>
           </Link>
+
+          {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant"
+            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-low text-on-surface-variant transition-all"
             aria-label={mobileOpen ? t("closeMenu") : t("openMenu")}
           >
             <span className="material-symbols-outlined">{mobileOpen ? "close" : "menu"}</span>
           </button>
         </div>
       </div>
+
+      {/* Mobile nav drawer */}
       {mobileOpen && (
-        <nav className="md:hidden border-t border-outline-variant/30 bg-surface px-gutter py-md space-y-sm">
+        <nav className="lg:hidden border-t border-outline-variant/30 bg-surface-container-lowest px-container-margin pt-md pb-6 space-y-1 animate-fade-in shadow-md">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="block font-label-md text-label-md text-on-surface-variant py-2"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-body-md hover:bg-surface-container-low hover:text-primary transition-all"
               onClick={() => setMobileOpen(false)}
             >
+              <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
               {item.label}
             </Link>
           ))}
           <Link
-            href={user ? "/" : "/login"}
-            className="block font-label-md text-label-md text-primary py-2"
+            href="/perguntas-frequentes"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-body-md hover:bg-surface-container-low hover:text-primary transition-all"
             onClick={() => setMobileOpen(false)}
           >
+            <span className="material-symbols-outlined text-[20px]">help</span>
+            Ajuda
+          </Link>
+          <Link
+            href={user ? "/perfil" : "/login"}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-on-primary font-label-bold mt-2 hover:brightness-110 transition-all"
+            onClick={() => setMobileOpen(false)}
+          >
+            <span className="material-symbols-outlined text-[20px]">person</span>
             {user ? t("account") : t("login")}
           </Link>
         </nav>
