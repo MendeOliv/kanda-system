@@ -36,7 +36,7 @@ export const catalogApi = {
     bySlug: (slug: string) => api.get(`/categories/${slug}`).then((r) => r.data),
   },
   products: {
-    list: () => api.get("/products").then((r) => r.data),
+    list: (params = {}) => api.get("/products", { params }).then((r) => r.data),
     byId: (id: string) => api.get(`/products/${id}`).then((r) => r.data),
     bySku: (sku: string) => api.get(`/products/sku/${sku}`).then((r) => r.data),
   },
