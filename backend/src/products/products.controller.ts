@@ -3,9 +3,10 @@ import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Products')
-@Controller('api/products')
+@Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
@@ -16,12 +17,14 @@ export class ProductsController {
   }
 
   @Get()
-    @ApiOperation({ summary: 'Listar produtos com filtros' })
-    async findAll(@Query() query: any = {}) {
-      return this.productsService.findAll(query);
-    }
+  @Public()
+  @ApiOperation({ summary: 'Listar produtos com filtros' })
+  async findAll(@Query() query: any = {}) {
+    return this.productsService.findAll(query);
+  }
 
   @Get('categories')
+  @Public()
   @ApiOperation({ summary: 'Listar categorias' })
   async listCategories() {
     return this.productsService.listCategories();

@@ -16,6 +16,7 @@ import { CheckoutModule } from './checkout/checkout.module';
 import { AdminModule } from './admin/admin.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { ContactModule } from './contact/contact.module';
+import { BrandModule } from './brand/brand.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -42,6 +43,7 @@ import { AppService } from './app.service';
     AdminModule,
     NewsletterModule,
     ContactModule,
+    BrandModule,
   ],
   controllers: [AppController],
   providers: [

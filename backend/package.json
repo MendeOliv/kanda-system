@@ -24,7 +24,7 @@
     "migrate:prod": "prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
-    "seed": "ts-node ../scripts/seed-catalog.ts"
+    "seed": "ts-node ./scripts/seed-catalog.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

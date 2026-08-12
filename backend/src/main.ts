@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api');
 
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
@@ -38,6 +38,6 @@ async function bootstrap() {
   }
 
   await app.listen(3001);
-  console.log(`🚀 Kanda API running on http://localhost:3001/api/v1`);
+  console.log(`���🚀 Kanda API running on http://localhost:3001/api`);
 }
 bootstrap();

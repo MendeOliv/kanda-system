@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
@@ -34,6 +34,9 @@ export const catalogApi = {
   categories: {
     list: () => api.get("/categories").then((r) => r.data),
     bySlug: (slug: string) => api.get(`/categories/${slug}`).then((r) => r.data),
+  },
+  brands: {
+    list: () => api.get("/brands").then((r) => r.data),
   },
   products: {
     list: (params = {}) => api.get("/products", { params }).then((r) => r.data),

@@ -45,4 +45,9 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   status?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  brandId?: string;
 }

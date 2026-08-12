@@ -8,7 +8,6 @@ import { useState, useEffect } from "react";
 
 interface Product {
   id: number | string;
-  brand: string;
   name: string;
   price: number;
   priceLabel: string;
@@ -19,6 +18,10 @@ interface Product {
   category?: {
     name: string;
   };
+  brand?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface Category {
@@ -32,29 +35,19 @@ export default function MercadoPage() {
   const { addItem } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProducts = async (category: string | null = null, brands: string[] = []) => {
+  const fetchBrands = async () => {
     try {
-      setLoading(true);
-      const params: any = {};
-      if (category) {
-        params.category = category;
-      }
-      if (brands.length > 0) {
-        params.brands = brands.join(',');
-      }
-      const response = await catalogApi.products.list(params);
-      setProducts(response.products || response);
-      setError(null);
+      const response = await catalogApi.brands.list();
+      setBrands(response || []);
     } catch (err) {
-      console.error("Failed to fetch products:", err);
-      setError("Falha ao carregar produtos");
-    } finally {
-      setLoading(false);
+      console.error("Failed to fetch brands:", err);
+      setError("Falha ao carregar marcas");
     }
   };
 
@@ -68,10 +61,35 @@ export default function MercadoPage() {
     }
   };
 
+  const fetchProducts = async (category: string | null = null, brandIds: string[] = []) => {
+    try {
+      setLoading(true);
+      const params: any = {};
+      if (category) {
+        params.category = category;
+      }
+      if (brandIds.length > 0) {
+        params.brandIds = brandIds.join(",");
+      }
+      const response = await catalogApi.products.list(params);
+      setProducts(response.products || response);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch products:", err);
+      setError("Falha ao carregar produtos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCategories();
-    fetchProducts(selectedCategory, selectedBrands);
-  }, [selectedCategory, selectedBrands]);
+    fetchBrands();
+  }, []);
+
+  useEffect(() => {
+    fetchProducts(selectedCategory, selectedBrandIds);
+  }, [selectedCategory, selectedBrandIds]);
 
   if (loading) {
     return (
@@ -119,30 +137,23 @@ export default function MercadoPage() {
 
             <div>
               <h3 className="font-label-bold text-label-bold text-on-surface-variant mb-sm">Marca</h3>
-              {/* Dynamic brands from products */}
               <ul className="space-y-sm font-body-sm text-body-sm text-on-surface">
-                {[
-                  ...new Set(
-                    products
-                      .map((p) => p.brand)
-                      .filter((brand): brand is string => Boolean(brand))
-                  ),
-                ].map((m) => (
-                  <li key={m}>
+                {brands.map((brand) => (
+                  <li key={brand.id}>
                     <label className="flex items-center gap-xs cursor-pointer hover:text-primary transition-colors">
                       <input
-                        className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4"
                         type="checkbox"
-                        checked={selectedBrands.includes(m)}
+                        checked={selectedBrandIds.includes(brand.id)}
                         onChange={() => {
-                          setSelectedBrands((prev) =>
-                            prev.includes(m)
-                              ? prev.filter((brand) => brand !== m)
-                              : [...prev, m]
+                          setSelectedBrandIds((prev) =>
+                            prev.includes(brand.id)
+                              ? prev.filter((id) => id !== brand.id)
+                              : [...prev, brand.id]
                           );
                         }}
+                        className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4"
                       />
-                      {m}
+                      {brand.name}
                     </label>
                   </li>
                 ))}
@@ -195,7 +206,7 @@ export default function MercadoPage() {
           {/* Pagination */}
           <div className="mt-xl flex justify-center items-center gap-sm font-body-md text-body-md">
             <button className="p-xs text-secondary hover:bg-surface-container-low rounded flex items-center justify-center disabled:opacity-50">
-              <span className="material-symbols-outlined">chevron_left</span>
+              <span className="material-symbols-outined">chevron_left</span>
             </button>
             {[1, 2, 3].map((n) => (
               <button
@@ -263,28 +274,22 @@ export default function MercadoPage() {
             <div>
               <h3 className="font-label-bold text-label-bold text_on_surface_variant mb_sm">Marca</h3>
               <ul className="space_y_sm font_body_sm text_body_sm text_on_surface">
-                {[
-                  ...new Set(
-                    products
-                      .map((p) => p.brand)
-                      .filter((brand): brand is string => Boolean(brand))
-                  ),
-                ].map((m) => (
-                  <li key={m}>
+                {brands.map((brand) => (
+                  <li key={brand.id}>
                     <label className="flex items-center gap-xs cursor-pointer hover:text_primary transition-colors">
                       <input
-                        className="rounded border_outline_variant text_primary focus:ring_primary w-4 h-4"
                         type="checkbox"
-                        checked={selectedBrands.includes(m)}
+                        checked={selectedBrandIds.includes(brand.id)}
                         onChange={() => {
-                          setSelectedBrands((prev) =>
-                            prev.includes(m)
-                              ? prev.filter((brand) => brand !== m)
-                              : [...prev, m]
+                          setSelectedBrandIds((prev) =>
+                            prev.includes(brand.id)
+                              ? prev.filter((id) => id !== brand.id)
+                              : [...prev, brand.id]
                           );
                         }}
+                        className="rounded border_outline_variant text_primary focus:ring_primary w-4 h-4"
                       />
-                      {m}
+                      {brand.name}
                     </label>
                   </li>
                 ))}
@@ -318,11 +323,12 @@ export default function MercadoPage() {
               <button
                 onClick={() => {
                   fetchCategories();
-                  fetchProducts(selectedCategory, selectedBrands);
+                  fetchBrands();
+                  fetchProducts(selectedCategory, selectedBrandIds);
                 }}
                 className="bg_primary text_on_primary font_label_bold h-12 px-xl rounded-lg flex items-center justify_center gap_xs hover:bg_surface_tint transition_colors"
               >
-                <span className="material_symbols_outlined text-[20px]">refresh</span> Tentar Novamente
+                <span className="material_symbols_outined text-[20px]">refresh</span> Tentar Novamente
               </button>
             </div>
           </div>
@@ -330,7 +336,7 @@ export default function MercadoPage() {
           {/* Pagination */}
           <div className="mt_xl flex justify-center items-center gap_sm font_body_md text_body_md">
             <button className="p-xs text_secondary hover:bg_surface_container_low rounded flex items-center justify_center disabled:opacity-50">
-              <span className="material_symbols_outlined">chevron_left</span>
+              <span className="material_symbols_outined">chevron_left</span>
             </button>
             {[1, 2, 3].map((n) => (
               <button
@@ -397,28 +403,22 @@ export default function MercadoPage() {
           <div>
             <h3 className="font_label_bold text_label_bold text_on_surface_variant mb_sm">Marca</h3>
             <ul className="space_y_sm font_body_sm text_body_sm text_on_surface">
-              {[
-                ...new Set(
-                  products
-                    .map((p) => p.brand)
-                    .filter((brand): brand is string => Boolean(brand))
-                ),
-              ].map((m) => (
-                <li key={m}>
+              {brands.map((brand) => (
+                <li key={brand.id}>
                   <label className="flex items-center gap-xs cursor-pointer hover:text_primary transition-colors">
                     <input
-                      className="rounded border_outline_variant text_primary focus:ring_primary w-4 h-4"
                       type="checkbox"
-                      checked={selectedBrands.includes(m)}
+                      checked={selectedBrandIds.includes(brand.id)}
                       onChange={() => {
-                        setSelectedBrands((prev) =>
-                          prev.includes(m)
-                            ? prev.filter((brand) => brand !== m)
-                            : [...prev, m]
+                        setSelectedBrandIds((prev) =>
+                          prev.includes(brand.id)
+                            ? prev.filter((id) => id !== brand.id)
+                            : [...prev, brand.id]
                         );
                       }}
+                      className="rounded border_outline_variant text_primary focus:ring_primary w-4 h-4"
                     />
-                    {m}
+                    {brand.name}
                   </label>
                 </li>
               ))}
@@ -474,20 +474,20 @@ export default function MercadoPage() {
                 />
               </div>
               <div className="p-sm flex-1 flex flex_col">
-                <span className="font_body_sm text_body_sm text_on_surface_variant uppercase tracking-wide text-[10px] mb_base">{p.brand}</span>
-                <h3 className="font_body_md text_body_md text_on_surface line_clamp_2 leading_tight>{p.name}</h3>
+                <span className="font_body_sm text_body_sm text_on_surface_variant uppercase tracking-wide text-[10px] mb_base">{p.brand?.name ?? "Sem marca"}</span>
+                <h3 className="font_body_md text_body_md text_on_surface line_clamp_2 leading_tight">{p.name}</h3>
                 <div className="mt-auto pt_sm flex flex_col gap_sm">
                   <div className="flex items-center gap_xs">
-                    <span className="font_price_display text_price_display text_primary>{p.priceLabel}</span>
+                    <span className="font_price_display text_price_display text_primary">{p.priceLabel}</span>
                     {p.oldPrice && (
-                      <span className="font_body_sm text_body_sm text_outline_variant line-through text-[12px]>{p.oldPrice}</span>
+                      <span className="font_body_sm text_body_sm text_outline_variant line-through text-[12px]">{p.oldPrice}</span>
                     )}
                   </div>
                   {p.soldOut ? (
                     <button
                       className="w-full h-[48px] bg_surface_variant text_secondary rounded-lg flex items-center justify_center gap_xs font_label_bold text_label_bold cursor_not_allowed" disabled
                     >
-                      <span className="material_symbols_outlined text-[20px]">notifications</span> Avisar-me
+                      <span className="material_symbols_outined text-[20px]">notifications</span> Avisar-me
                     </button>
                   ) : (
                     <button

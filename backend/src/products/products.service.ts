@@ -47,7 +47,7 @@ export class ProductsService {
   }
 
   async findAll(query: any = {}) {
-    const { category, page = 1, limit = 20, search, priceMin, priceMax } = query;
+    const { category, page = 1, limit = 20, search, priceMin, priceMax, brandId, brandIds } = query;
     const pageNum = parseInt(page.toString(), 10);
     const limitNum = parseInt(limit.toString(), 10);
     const skip = (pageNum - 1) * limitNum;
@@ -69,13 +69,20 @@ export class ProductsService {
       if (priceMin) where.price.gte = parseFloat(priceMin.toString());
       if (priceMax) where.price.lte = parseFloat(priceMax.toString());
     }
+    if (brandId) {
+      where.brandId = brandId;
+    }
+    if (brandIds) {
+      const ids = Array.isArray(brandIds) ? brandIds : brandIds.toString().split(',').map(id => id.trim());
+      where.brandId = { in: ids };
+    }
 
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
         skip,
         take: limitNum,
-        include: { category: true },
+        include: { category: true, brand: true },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.product.count({ where }),
