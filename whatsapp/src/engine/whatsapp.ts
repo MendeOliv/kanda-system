@@ -87,12 +87,12 @@ export const startWhatsAppClient = async (): Promise<any> => {
         console.log(pairingCode);
         console.log('[WA PAIRING] Open WhatsApp → Settings → Linked Devices → Link a Device → type this code');
       }
-
-      // Keep QR as fallback if available
-      if (qr) {
-        console.log('[WA QR] QR code received, scan to connect');
+      else if (qr) {
+        console.log('[WA QR] Scan the QR code below to connect:');
+        const qrcode = require('qrcode-terminal');
+        qrcode.generate(qr, { small: true });
       }
-
+  
       if (connection === 'close') {
         const shouldReconnect =
           (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -124,24 +124,10 @@ export const startWhatsAppClient = async (): Promise<any> => {
         whatsappStatus = 'CONNECTED';
         isConnecting = false;
 
-        // TEST: Try to send a test message
-        try {
-          const testJid = '5521999999999@s.us'; // Substitui por teu número pessoal (ex: +55 21 99999-9999)
-          // Remove espaços e dashes, formato: 55 + area code + número
-          console.log('[TEST] Attempting to send test message to:', testJid);
-          
-          // Não envia realmente, só testa se a função existe
-          if (sock && sock.sendMessage) {
-            console.log('[TEST] ✅ sendMessage function exists');
-            console.log('[TEST] Ready to send messages');
-          }
-        } catch (err) {
-          console.error('[TEST] Error:', err);
-        }
       }
     });
-
-    // Handle incoming messages (optional, for logging)
+  
+  // Handle incoming messages (optional, for logging)
     sock.ev.on('messages.upsert', async (m: any) => {
       try {
         for (const msg of m.messages) {

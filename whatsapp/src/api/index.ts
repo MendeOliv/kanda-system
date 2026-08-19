@@ -30,7 +30,21 @@ app.get('/health', async (req: Request, res: Response) => {
     });
   }
 });
-
+// Send WhatsApp message endpoint
+app.post('/send-message', async (req: Request, res: Response) => {
+  try {
+    const { to, text } = req.body;
+    if (!to || !text) {
+      return res.status(400).json({ error: 'Missing to or text' });
+    }
+    const { sendMessage } = await import('../engine/whatsapp');
+    await sendMessage(to, text);
+    res.status(200).json({ status: 'Message sent' });
+  } catch (err) {
+    console.error('[API] Error sending message:', err);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
 // 404 handler
 app.use((req: Request, res: Response, _next: NextFunction) => {
   res.status(404).json({ error: 'Not found' });
