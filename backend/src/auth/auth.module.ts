@@ -8,7 +8,6 @@ import { FirebaseStrategy } from './firebase.strategy';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CompositeAuthGuard } from './composite-auth.guard';
-import { N8NInternalKeyGuard } from './guards/n8n-internal-key.guard';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -46,7 +45,6 @@ import { PrismaModule } from '../prisma/prisma.module';
     FirebaseAuthGuard,
     JwtAuthGuard,
     CompositeAuthGuard,
-    N8NInternalKeyGuard,
   ],
   exports: [
     AuthService,
@@ -56,7 +54,6 @@ import { PrismaModule } from '../prisma/prisma.module';
     CompositeAuthGuard,
     FirebaseAuthGuard,
     PassportModule,
-    N8NInternalKeyGuard,
   ],
 })
 export class AuthModule {}

@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { AutomationService } from './automation.service';
-import { AutomationController } from './automation.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ProductsModule } from '../products/products.module';
 import { OrdersModule } from '../orders/orders.module';
@@ -20,7 +19,6 @@ import { PaymentsModule } from '../payments/payments.module';
     OrdersModule,
     PaymentsModule,
   ],
-  controllers: [AutomationController],
   providers: [AutomationService, GeminiProvider, GoogleVisionProvider],
   exports: [AutomationService],
 })

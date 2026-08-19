@@ -14,6 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
       locale: 'pt-AO',
     },
+    icons: [
+      { rel: 'icon', url: '/favicon.ico' },
+      { rel: 'icon', url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
   };
 }
 

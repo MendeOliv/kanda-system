@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Kanda Icon">
+  <title>Kanda Supermercado Icon</title>
+  
+  <!-- Carrinho de compras verde (ícone principal) -->
+  <g transform="translate(15, 18)" fill="none" stroke="#2E8B3D" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Alça -->
+    <path d="M 10 25 C 6 10 18 4 30 4 L 85 4 C 95 4 98 12 98 20"/>
+    
+    <!-- Cesto -->
+    <path d="M 22 25 L 22 68 Q 22 76 30 76 L 80 76 Q 88 76 88 68 L 88 25"/>
+    
+    <!-- Grades -->
+    <line x1="38" y1="32" x2="38" y2="70" stroke-width="4"/>
+    <line x1="54" y1="32" x2="54" y2="70" stroke-width="4"/>
+    <line x1="70" y1="32" x2="70" y2="70" stroke-width="4"/>
+    <line x1="25" y1="48" x2="85" y2="48" stroke-width="3.5"/>
+  </g>
+  
+  <!-- Rodas -->
+  <circle cx="45" cy="105" r="10" fill="#2E8B3D"/>
+  <circle cx="85" cy="105" r="10" fill="#2E8B3D"/>
+</svg>

@@ -60,17 +60,6 @@ model Category {
   @@index([slug])
 }
 
-model Brand {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  products Product[] @relation("ProductBrand")
-}
-
 model Product {
   id            String   @id @default(cuid())
   name          String   @unique
@@ -84,8 +73,6 @@ model Product {
   status        String   @default("active")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  brandId       String?
-  brand         Brand?   @relation("ProductBrand", fields: [brandId], references: [id])
 
   category   Category    @relation(fields: [categoryId], references: [id])
   orderItems OrderItem[]
@@ -94,7 +81,6 @@ model Product {
   @@index([categoryId])
   @@index([status])
   @@index([sku])
-  @@index([brandId])
 }
 
 model Order {
@@ -153,6 +139,17 @@ model Payment {
   order Order @relation(fields: [orderId], references: [id])
 
   @@index([appypayTransactionId])
+}
+
+model Workflow {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String?
+  n8nWorkflowId String?  @unique
+  trigger       String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model TrackingHistory {

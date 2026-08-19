@@ -40,9 +40,7 @@ export function Header({ showSearch }: HeaderProps) {
       <div className="flex justify-between items-center px-container-margin py-md max-w-7xl mx-auto w-full">
         {/* Brand */}
         <Link href="/" className="font-h2 text-h2 text-primary shrink-0 flex items-center gap-xs">
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-            storefront
-          </span>
+          <img src="/kanda-logo-exact.svg" alt="Kanda" className="h-10 w-auto" />
           {tBrand("name")}
         </Link>
 

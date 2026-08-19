@@ -12,7 +12,7 @@ export function Footer() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-lg px-container-margin py-xl max-w-7xl mx-auto w-full text-on-secondary">
         {/* Brand */}
         <div className="col-span-2 md:col-span-1 flex flex-col gap-sm">
-          <span className="font-h3 text-h3 text-on-secondary">Kanda Mercearia</span>
+          <img src="/kanda-logo-exact.svg" alt="Kanda" className="h-10 w-auto" />
           <p className="font-body-sm text-body-sm opacity-80 mt-sm">{tBrand("tagline")}</p>
         </div>
 

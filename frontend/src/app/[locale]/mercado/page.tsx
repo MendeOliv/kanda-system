@@ -4,6 +4,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import { catalogApi } from "@/lib/api";
+import { useTranslations } from "next-intl";
+const FALLBACK_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 import { useState, useEffect } from "react";
 
 interface Product {
@@ -38,6 +40,15 @@ export default function MercadoPage() {
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
+  const clearFilters = () => {
+    setSelectedCategory(null);
+    setSelectedBrandIds([]);
+    setMinPrice("");
+    setMaxPrice("");
+  };
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -129,9 +140,9 @@ export default function MercadoPage() {
             <div className="mb-lg">
               <h3 className="font-label-bold text-label-bold text-on-surface-variant mb-sm">Preço (Kz)</h3>
               <div className="flex items-center gap-sm">
-                <input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Min" type="number" />
+<input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="Min" type="number" />
                 <span className="text-outline-variant">-</span>
-                <input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="Max" type="number" />
+<input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="Max" type="number" />
               </div>
             </div>
 
@@ -206,7 +217,7 @@ export default function MercadoPage() {
           {/* Pagination */}
           <div className="mt-xl flex justify-center items-center gap-sm font-body-md text-body-md">
             <button className="p-xs text-secondary hover:bg-surface-container-low rounded flex items-center justify-center disabled:opacity-50">
-              <span className="material-symbols-outined">chevron_left</span>
+              <span className="material-symbols-outlined">chevron_left</span>
             </button>
             {[1, 2, 3].map((n) => (
               <button
@@ -219,7 +230,7 @@ export default function MercadoPage() {
             <span className="text-outline-variant">...</span>
             <button className="w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-surface-container-low transition-colors">8</button>
             <button className="p-xs text-secondary hover:bg-surface-container-low rounded flex items-center justify-center">
-              <span className="material-symbols-outined">chevron_right</span>
+              <span className="material-symbols-outlined">chevron_right</span>
             </button>
           </div>
         </section>
@@ -265,9 +276,9 @@ export default function MercadoPage() {
             <div className="mb-lg">
               <h3 className="font-label-bold text-label-bold text_on_surface_variant mb_sm">Preço (Kz)</h3>
               <div className="flex items-center gap-sm">
-                <input className="w-full bg_surface text_on_surface border border_outline_variant rounded py-xs px_sm font_body_sm text_body_sm focus:border_primary focus:ring_1 focus:ring_1 outline_none" placeholder="Min" type="number" />
+<input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="Min" type="number" />
                 <span className="text_outline_variant">-</span>
-                <input className="w-full bg_surface text_on_surface border border_outline_variant rounded py-xs px_sm font_body_sm text_body_sm focus:border_primary focus:ring_1 focus:ring_1 outline_none" placeholder="Max" type="number" />
+<input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="Max" type="number" />
               </div>
             </div>
 
@@ -328,7 +339,7 @@ export default function MercadoPage() {
                 }}
                 className="bg_primary text_on_primary font_label_bold h-12 px-xl rounded-lg flex items-center justify_center gap_xs hover:bg_surface_tint transition_colors"
               >
-                <span className="material_symbols_outined text-[20px]">refresh</span> Tentar Novamente
+                <span className="material_symbols_outlined text-[20px]">refresh</span> Tentar Novamente
               </button>
             </div>
           </div>
@@ -336,7 +347,7 @@ export default function MercadoPage() {
           {/* Pagination */}
           <div className="mt_xl flex justify-center items-center gap_sm font_body_md text_body_md">
             <button className="p-xs text_secondary hover:bg_surface_container_low rounded flex items-center justify_center disabled:opacity-50">
-              <span className="material_symbols_outined">chevron_left</span>
+              <span className="material_symbols_outlined">chevron_left</span>
             </button>
             {[1, 2, 3].map((n) => (
               <button
@@ -349,7 +360,7 @@ export default function MercadoPage() {
             <span className="text_outline_variant">...</span>
             <button className="w-8 h-8 flex items-center justify-center rounded-full text_secondary hover:bg_surface_container_low transition_colors">8</button>
             <button className="p-xs text_secondary hover:bg_surface_container_low rounded flex items-center justify-center">
-              <span className="material_symbols_outined">chevron_right</span>
+              <span className="material_symbols_outlined">chevron_right</span>
             </button>
           </div>
         </section>
@@ -394,9 +405,9 @@ export default function MercadoPage() {
           <div className="mb-lg">
             <h3 className="font_label_bold text_label_bold text_on_surface_variant mb_sm">Preço (Kz)</h3>
             <div className="flex items-center gap-sm">
-              <input className="w-full bg_surface text_on_surface border border_outline_variant rounded py-xs px_sm font_body_sm text_body_sm focus:border_primary focus:ring_1 focus:ring_1 outline_none" placeholder="Min" type="number" />
+<input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="Min" type="number" />
               <span className="text_outline_variant">-</span>
-              <input className="w-full bg_surface text_on_surface border border_outline_variant rounded py-xs px_sm font_body_sm text_body_sm focus:border_primary focus:ring_1 focus:ring_1 outline_none" placeholder="Max" type="number" />
+<input className="w-full bg-surface text-on-surface border border-outline-variant rounded py-xs px-sm font-body-sm text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="Max" type="number" />
             </div>
           </div>
 
@@ -469,9 +480,9 @@ export default function MercadoPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   className="w-full h-full object-cover group_hover:scale-105 transition-transform duration-300"
-                  src={p.image}
+                  src={p.image ?? FALLBACK_IMAGE}
                   alt={p.name}
-                />
+                 onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
               </div>
               <div className="p-sm flex-1 flex flex_col">
                 <span className="font_body_sm text_body_sm text_on_surface_variant uppercase tracking-wide text-[10px] mb_base">{p.brand?.name ?? "Sem marca"}</span>
@@ -487,7 +498,7 @@ export default function MercadoPage() {
                     <button
                       className="w-full h-[48px] bg_surface_variant text_secondary rounded-lg flex items-center justify_center gap_xs font_label_bold text_label_bold cursor_not_allowed" disabled
                     >
-                      <span className="material_symbols_outined text-[20px]">notifications</span> Avisar-me
+                      <span className="material_symbols_outlined text-[20px]">notifications</span> Avisar-me
                     </button>
                   ) : (
                     <button
@@ -502,7 +513,7 @@ export default function MercadoPage() {
                       }
                       className="w-full h-[48px] bg_primary text_on_primary rounded-lg flex items-center justify_center gap_xs font_label_bold text_label_bold hover:bg_surface_tint active:scale-95 transition_all"
                     >
-                      <span className="material_symbols_outined text-[20px]">add</span> Adicionar
+                      <span className="material_symbols_outlined text-[20px]">add</span> Adicionar
                     </button>
                   )}
                 </div>
@@ -514,7 +525,7 @@ export default function MercadoPage() {
         {/* Pagination */}
         <div className="mt_xl flex justify-center items-center gap_sm font_body_md text_body_md">
           <button className="p-xs text_secondary hover:bg_surface_container_low rounded flex items-center justify_center disabled:opacity-50">
-            <span className="material_symbols_outined">chevron_left</span>
+            <span className="material_symbols_outlined">chevron_left</span>
           </button>
           {[1, 2, 3].map((n) => (
             <button
@@ -527,7 +538,7 @@ export default function MercadoPage() {
           <span className="text_outline_variant">...</span>
           <button className="w-8 h-8 flex items-center justify-center rounded-full text_secondary hover:bg_surface_container_low transition_colors">8</button>
           <button className="p-xs text_secondary hover:bg_surface_container_low rounded flex items-center justify-center">
-            <span className="material_symbols_outined">chevron_right</span>
+            <span className="material_symbols_outlined">chevron_right</span>
           </button>
         </div>
       </section>
