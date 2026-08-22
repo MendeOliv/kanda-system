@@ -1,9 +1,10 @@
 // This file will set up the adapter that listens to WhatsApp events and forwards them to the backend.
 // For now, we only log messages locally.
 
-import { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, isJidBroadcast } from '@whiskeysockets/baileys';
+import { startWhatsAppClient, getClient, destroyWhatsAppClient } from '../engine/whatsapp';
 import { Boom } from '@hapi/boom';
 import config from '../config';
+import axios from 'axios';
 import logger from '../logger';
 
 // Define the DTO for a normalized WhatsApp message
@@ -93,146 +94,108 @@ export function normalizeWhatsAppMessage(message: any): WhatsAppIncomingMessage 
   };
 }
 
-// Global state
-let sock: any = null;
-let isConnecting = false;
+// Global state to avoid attaching listeners multiple times
+let _listenersAttached = false;
 
 /**
- * Start the WhatsApp client using Baileys for the adapter
+ * Attach listeners to the engine's WhatsApp client.
+ */
+function attachListeners(): void {
+  const client = getClient();
+  if (!client) {
+    console.log('[ADAPTER] WhatsApp client not available yet');
+    return;
+  }
+
+  // Handle connection updates
+  client.ev.on('connection.update', async (update: any) => {
+    const { connection, lastDisconnect, qr, pairingCode } = update;
+
+    // NEW: Handle pairing code (Baileys 7.0+)
+    if (pairingCode) {
+      console.log('[ADAPTER] Pairing code (enter on WhatsApp):');
+      console.log(pairingCode);
+      console.log('[ADAPTER] Open WhatsApp → Settings → Linked Devices → Link a Device → type this code');
+    } else if (qr) {
+      console.log('[ADAPTER QR] QR code received, scan to connect');
+      // QR is available - display it
+    }
+
+    if (connection === 'close') {
+      const shouldReconnect =
+        (lastDisconnect?.error as Boom)?.output?.statusCode !==
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assumption
+        (require('@whiskeysockets/baileys').DisconnectReason.loggedOut as any); // Avoid importing DisconnectReason here
+      console.log('[ADAPTER] Connection closed:', lastDisconnect?.error);
+
+      if (shouldReconnect) {
+        console.log('[ADAPTER] Reconnecting...');
+        // Reconnection is handled by the engine; we just wait for it.
+        // Optionally, we could trigger a restart, but engine already does.
+      } else {
+        console.log('[ADAPTER] Logged out');
+      }
+    }
+
+    if (connection === 'connecting') {
+      console.log('[ADAPTER] Connecting...');
+    }
+
+    if (connection === 'open') {
+      console.log('[ADAPTER] Authenticated and connected');
+    }
+  });
+
+  // Handle incoming messages
+  client.ev.on('messages.upsert', async (m: any) => {
+    try {
+      for (const msg of m.messages) {
+        if (!msg.message) continue;
+
+        const normalized = normalizeWhatsAppMessage(msg);
+        console.log(`[ADAPTER] Received message: ${JSON.stringify(normalized)}`);
+        // Forward normalized message to backend via HTTP
+        try {
+          await axios.post(`${config.backendUrl}/api/whatsapp/message`, normalized);
+          logger.info({ msg: '[ADAPTER] Message forwarded to backend', externalMessageId: normalized.externalMessageId });
+        } catch (httpError: any) {
+          logger.error({ msg: '[ADAPTER] Failed to forward message to backend', error: httpError.message, externalMessageId: normalized.externalMessageId });
+          // Don't re-throw - we don't want WhatsApp process to crash if backend is down
+        }
+        // Here you could forward to backend via HTTP or other means
+        // For now, just log
+      }
+    } catch (err) {
+      console.error('[ADAPTER] Error processing message:', err);
+      logger.error({ msg: '[ADAPTER] Error processing message', err });
+    }
+  });
+}
+
+/**
+ * Start the WhatsApp client using Baileys (delegates to engine).
  */
 export const startWhatsAppAdapter = async (): Promise<any> => {
-  if (sock) {
-    console.log('[ADAPTER] Client already running');
-    return sock;
+  await startWhatsAppClient(); // Ensure the engine client is started
+  if (!_listenersAttached) {
+    attachListeners();
+    _listenersAttached = true;
   }
-
-  if (isConnecting) {
-    console.log('[ADAPTER] Connection already in progress...');
-    // Wait for connection to complete
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (sock) {
-          clearInterval(checkInterval);
-          resolve(sock);
-        }
-      }, 500);
-      setTimeout(() => clearInterval(checkInterval), 60000);
-    });
-  }
-
-  isConnecting = true;
-  console.log('[ADAPTER] Starting WhatsApp adapter...');
-
-  try {
-    const authDir = 'auth_info_baileys_adapter';
-    const { state, saveCreds } = await useMultiFileAuthState(authDir);
-    const { version } = await fetchLatestBaileysVersion();
-
-    console.log('[ADAPTER] Using Baileys version:', version.join('.'));
-
-    sock = makeWASocket({
-      version,
-      auth: state,
-      printQRInTerminal: true,
-      logger: undefined,
-      browser: ['Ubuntu', 'Chrome', '121.0.0.0'],
-      syncFullHistory: false,
-      markOnlineOnConnect: true,
-      generateHighQualityLinkPreview: false,
-      shouldSyncHistoryMessage: () => false,
-    });
-
-    // Handle credentials update
-    sock.ev.on('creds.update', saveCreds);
-
-    // Handle connection updates
-    sock.ev.on('connection.update', async (update: any) => {
-      const { connection, lastDisconnect, qr } = update;
-
-      if (qr) {
-        console.log('[ADAPTER QR] QR code received, scan to connect');
-        // QR is available - display it
-      }
-
-      if (connection === 'close') {
-        const shouldReconnect =
-          (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-
-        console.log('[ADAPTER] Connection closed:', lastDisconnect?.error);
-
-        if (shouldReconnect) {
-          console.log('[ADAPTER] Reconnecting...');
-          isConnecting = false;
-          sock = null;
-          await new Promise((r) => setTimeout(r, 3000));
-          return startWhatsAppAdapter();
-        } else {
-          console.log('[ADAPTER] Logged out');
-          sock = null;
-          isConnecting = false;
-        }
-      }
-
-      if (connection === 'connecting') {
-        console.log('[ADAPTER] Connecting...');
-      }
-
-      if (connection === 'open') {
-        console.log('[ADAPTER] Authenticated and connected');
-      }
-    });
-
-    // Handle incoming messages
-    sock.ev.on('messages.upsert', async (m: any) => {
-      try {
-        for (const msg of m.messages) {
-          if (!msg.message) continue;
-
-          const normalized = normalizeWhatsAppMessage(msg);
-          console.log(`[ADAPTER] Received message: ${JSON.stringify(normalized)}`);
-          // Here you could forward to backend via HTTP or other means
-          // For now, just log
-        }
-      } catch (err) {
-        console.error('[ADAPTER] Error processing message:', err);
-        logger.error({ msg: '[ADAPTER] Error processing message', err });
-      }
-    });
-
-    console.log('[ADAPTER] Client initialized, waiting for connection...');
-    return sock;
-  } catch (err) {
-    console.error('[ADAPTER] Error starting client:', err);
-    logger.error({ msg: '[ADAPTER] Error starting client', err });
-    isConnecting = false;
-    sock = null;
-    throw err;
-  }
+  return getClient();
 };
 
 /**
  * Get the current client
  */
 export const getAdapterClient = (): any => {
-  return sock;
+  return getClient();
 };
 
 /**
  * Destroy the WhatsApp client
  */
 export const destroyWhatsAppAdapter = async (): Promise<void> => {
-  if (!sock) {
-    return;
-  }
-
-  try {
-    await sock.end();
-    sock = null;
-    console.log('[ADAPTER] Client destroyed');
-  } catch (err) {
-    console.error('[ADAPTER] Error destroying client:', err);
-    logger.error({ msg: '[ADAPTER] Error destroying client', err });
-  }
+  await destroyWhatsAppClient();
 };
 
 export default {

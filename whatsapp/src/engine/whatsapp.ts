@@ -195,9 +195,18 @@ export const sendMessage = async (jid: string, text: string): Promise<void> => {
     throw new Error('WhatsApp client not connected');
   }
 
+  // Log socket state and identity for debugging
+  console.log(`[DEBUG] sendMessage called: jid=${jid}, text=${text.substring(0, 50)}...`);
+  console.log(`[DEBUG] sock exists: ${!!sock}`);
+  if (sock) {
+    console.log(`[DEBUG] sock.user: ${JSON.stringify(sock.user)}`);
+    console.log(`[DEBUG] sock.connectionState: ${sock?.connection?.connection ?? 'unknown'}`);
+  }
+
   try {
-    await sock.sendMessage(jid, { text });
+    const result = await sock.sendMessage(jid, { text });
     console.log(`[BAILEYS] Message sent to ${jid}`);
+    console.log(`[DEBUG] sendMessage result: ${JSON.stringify(result)}`);
   } catch (err) {
     console.error('[BAILEYS] Error sending message:', err);
     logger.error({ msg: '[BAILEYS] Error sending message', err, jid });

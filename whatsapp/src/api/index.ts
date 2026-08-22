@@ -5,6 +5,9 @@ import config from '../config';
 // Initialize express app
 const app = express();
 
+// Parse JSON bodies
+app.use(express.json());
+
 // Set up pino logger
 app.use(pino({
   level: config.logLevel,
@@ -37,6 +40,7 @@ app.post('/send-message', async (req: Request, res: Response) => {
     if (!to || !text) {
       return res.status(400).json({ error: 'Missing to or text' });
     }
+    console.log(`[ADAPTER] Received send-message request: to=${to}, text=${text.substring(0, 50)}...`);
     const { sendMessage } = await import('../engine/whatsapp');
     await sendMessage(to, text);
     res.status(200).json({ status: 'Message sent' });

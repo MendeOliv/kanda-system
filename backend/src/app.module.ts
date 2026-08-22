@@ -17,34 +17,36 @@ import { AdminModule } from './admin/admin.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { ContactModule } from './contact/contact.module';
 import { BrandModule } from './brand/brand.module';
+import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60_000, // 1 minuto
-        limit: 10,   // 10 requests globais por IP
-      },
-    ]),
-    FirebaseModule.forRoot(),
-    PrismaModule,
-    AuthModule,
-    UsersModule,
-    ProductsModule,
-    OrdersModule,
-    CategoriesModule,
-    AutomationModule,
-    PaymentsModule,
-    CartModule,
-    CheckoutModule,
-    AdminModule,
-    NewsletterModule,
-    ContactModule,
-    BrandModule,
-  ],
+      ConfigModule.forRoot({ isGlobal: true }),
+      ThrottlerModule.forRoot([
+        {
+          ttl: 60_000, // 1 minuto
+          limit: 10,   // 10 requests globais por IP
+        },
+      ]),
+      FirebaseModule.forRoot(),
+      PrismaModule,
+      AuthModule,
+      UsersModule,
+      ProductsModule,
+      OrdersModule,
+      CategoriesModule,
+      AutomationModule,
+      PaymentsModule,
+      CartModule,
+      CheckoutModule,
+      AdminModule,
+      NewsletterModule,
+      ContactModule,
+      BrandModule,
+      WhatsAppModule,
+    ],
   controllers: [AppController],
   providers: [
     AppService,

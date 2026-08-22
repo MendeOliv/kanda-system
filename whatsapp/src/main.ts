@@ -139,8 +139,10 @@ import { startWhatsAppClient, destroyWhatsAppClient } from './engine/whatsapp';
 console.log('[DEBUG] Engine imported.');
 
 console.log('[DEBUG] About to import adapter...');
-// Import the adapter to ensure it's initialized (if needed)
-// We don't use it directly here, but it may have side effects
+// Import and START the adapter to attach message-forwarding listeners.
+// startWhatsAppAdapter delegates to the engine client (SINGLE socket) and
+// attaches the messages.upsert listener that forwards incoming messages
+// to the backend (POST /api/whatsapp/message).
 import { startWhatsAppAdapter } from './adapter';
 console.log('[DEBUG] Adapter imported.');
 
@@ -151,8 +153,8 @@ console.log('[DEBUG] Adapter imported.');
 console.log('[DEBUG] Creating server...');
 const port = process.env.PORT || 3000;
 
-console.log('[DEBUG] Starting WhatsApp client...');
-startWhatsAppClient()
+console.log('[DEBUG] Starting WhatsApp client (via adapter)...');
+startWhatsAppAdapter()
   .then(() => {
     console.log('[DEBUG] WhatsApp client started.');
     
