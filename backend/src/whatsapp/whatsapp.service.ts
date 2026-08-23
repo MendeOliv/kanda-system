@@ -16,17 +16,20 @@ export class WhatsAppService {
   }
 
   /**
-   * Convert phone number to WhatsApp JID format
-   * Removes non-digits and @s.whatsapp.net suffix if not present
+   * Convert phone number or JID to WhatsApp JID format
+   * If the identifier already contains '@', it is assumed to be a valid JID and returned as is.
+   * Otherwise, it is treated as a phone number and converted to the format: [digits]@s.whatsapp.net
    */
-  private toWhatsAppJid(phoneNumber: string): string {
-    const cleaned = phoneNumber.trim();
-    this.logger.log(`toWhatsAppJid input: '${phoneNumber}' -> cleaned: '${cleaned}'`);
-
-    if (/^\\d+@s\\.whatsapp\\.net$/.test(cleaned)) {
-      this.logger.log(`toWhatsAppJid matched regex, returning: '${cleaned}'`);
-      return cleaned;
+  private toWhatsAppJid(identifier: string): string {
+    // If it's already a JID (contains '@'), return as is.
+    if (identifier.includes('@')) {
+      this.logger.log(`toWhatsAppJid identifier is already a JID: '${identifier}'`);
+      return identifier;
     }
+
+    // Otherwise, treat as phone number and convert to JID for a user.
+    const cleaned = identifier.trim();
+    this.logger.log(`toWhatsAppJid input: '${identifier}' -> cleaned: '${cleaned}'`);
 
     // Extract only digits, removing all non-digit characters (including +, -, spaces, etc.)
     const digits = cleaned.replace(/[^0-9]/g, '');

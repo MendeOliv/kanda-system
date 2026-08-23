@@ -149,10 +149,26 @@ function attachListeners(): void {
   // Handle incoming messages
   client.ev.on('messages.upsert', async (m: any) => {
     try {
+      const botJid = client?.user?.id ?? '';
       for (const msg of m.messages) {
         if (!msg.message) continue;
 
+        // Check if it's a broadcast/status message
+        const fromJid = msg.key?.remoteJid ?? '';
+        if (fromJid.endsWith('@broadcast')) {
+          console.log('[ADAPTER] Ignoring broadcast message');
+          continue;
+        }
+
         const normalized = normalizeWhatsAppMessage(msg);
+        // Ignore messages sent by ourselves to prevent loops
+        if (normalized.fromMe) {
+          console.log('[ADAPTER] Ignoring message from self');
+          continue;
+        }
+        // Override the 'to' field with the bot's own JID
+        normalized.to = botJid;
+
         console.log(`[ADAPTER] Received message: ${JSON.stringify(normalized)}`);
         // Forward normalized message to backend via HTTP
         try {
@@ -162,8 +178,6 @@ function attachListeners(): void {
           logger.error({ msg: '[ADAPTER] Failed to forward message to backend', error: httpError.message, externalMessageId: normalized.externalMessageId });
           // Don't re-throw - we don't want WhatsApp process to crash if backend is down
         }
-        // Here you could forward to backend via HTTP or other means
-        // For now, just log
       }
     } catch (err) {
       console.error('[ADAPTER] Error processing message:', err);
