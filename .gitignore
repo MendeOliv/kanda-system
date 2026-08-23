@@ -53,3 +53,4 @@ backend/coverage/
 
 # Windows null device artifact
 nul
+whatsapp/auth_info_baileys/
