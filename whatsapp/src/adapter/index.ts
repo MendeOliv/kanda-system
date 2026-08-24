@@ -188,6 +188,8 @@ function attachListeners(): void {
         console.log(`[ADAPTER] Received message: ${JSON.stringify(normalized)}`);
         // Forward normalized message to backend via HTTP
                 try {
+                  console.log(`[AUTH DEBUG] Adapter: backendUrl=${config.backendUrl}`);
+                  console.log(`[AUTH DEBUG] Adapter: backendApiToken present: ${!!config.backendApiToken}, length: ${config.backendApiToken?.length ?? 0}`);
                   await axios.post(`${config.backendUrl}/api/whatsapp/message`, normalized, {
                     headers: {
                       'X-Internal-Key': config.backendApiToken,

@@ -24,12 +24,18 @@ export class CompositeAuthGuard implements CanActivate {
     // Check if the request is for the WhatsApp message endpoint
     const request = context.switchToHttp().getRequest();
     const path = request.path.replace(/\/+$/, ''); // Remove trailing slashes
+    // DEBUG: log auth info for WhatsApp message endpoint
     if (path === '/api/whatsapp/message') {
       const internalKey = request.header('x-internal-key');
       const expectedKey = process.env.BACKEND_API_TOKEN;
+      console.log(`[AUTH DEBUG] path=${path}`);
+      console.log(`[AUTH DEBUG] internal key present: ${!!internalKey}, length: ${internalKey?.length ?? 0}`);
+      console.log(`[AUTH DEBUG] expected key configured: ${!!expectedKey}, length: ${expectedKey?.length ?? 0}`);
       if (internalKey && expectedKey && internalKey === expectedKey) {
+        console.log(`[AUTH DEBUG] internal key match: true`);
         return true;
       }
+      console.log(`[AUTH DEBUG] internal key match: false`);
       throw new UnauthorizedException('Invalid internal API key');
     }
 

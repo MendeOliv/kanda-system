@@ -365,19 +365,27 @@ export const sendMessage = async (jid: string, text: string): Promise<void> => {
     console.log(`[DEBUG] sock.user: ${JSON.stringify(sock.user)}`);
     console.log(`[DEBUG] sock.connectionState: ${sock?.connection?.connection ?? 'unknown'}`);
     // LID resolution for outbound messages
+    console.log(`[LID DEBUG] jid: ${jid}, endsWith: ${jid.endsWith('@lid')}`);
     if (jid.endsWith('@lid')) {
       console.log(`[LID DEBUG] Attempting to resolve LID jid: ${jid}`);
       let resolvedJid = jid;
       // 1. Try to resolve via sock.contacts (map of normal JID -> contact info)
       if (sock && sock.contacts) {
         try {
+          console.log(`[LID DEBUG] sock.contacts has ${Object.keys(sock.contacts).length} entries`);
           const entries = Object.entries(sock.contacts);
           for (const [possibleJid, contact] of entries) {
-            if (contact && typeof contact === 'object' && 'lid' in contact && contact.lid === jid) {
+            if (contact && typeof contact === 'object' && 'lid' in contact && (contact as any).lid === jid) {
               resolvedJid = possibleJid;
               console.log(`[LID RESOLVE] Found contact by lid: ${jid} -> ${resolvedJid}`);
               break;
             }
+          }
+          if (resolvedJid === jid) {
+            console.log(`[LID DEBUG] No matching contact found in sock.contacts for lid ${jid}`);
+            // Log a few contacts for debugging
+            const sample = entries.slice(0, 5);
+            console.log(`[LID DEBUG] Sample contacts:`, sample.map(([jid, c]) => ({ jid, contact: c })));
           }
         } catch (e) {
           console.log(`[LID DEBUG] Error accessing sock.contacts: ${e}`);
@@ -388,7 +396,21 @@ export const sendMessage = async (jid: string, text: string): Promise<void> => {
         resolvedJid = sock.user.id;
         console.log(`[LID RESOLVE] LID belongs to bot: ${jid} -> ${resolvedJid}`);
       }
-      // 3. If still unresolved, throw a clear error
+      // 3. Try to resolve via signalRepository.lidMapping (Baileys official LID mapping)
+      if (resolvedJid === jid && sock && sock.signalRepository && sock.signalRepository.lidMapping) {
+        try {
+          const pnJid = await sock.signalRepository.lidMapping.getPNForLID(jid);
+          if (pnJid) {
+            resolvedJid = pnJid;
+            console.log(`[LID RESOLVE] Found via signalRepository.lidMapping: ${jid} -> ${resolvedJid}`);
+          } else {
+            console.log(`[LID DEBUG] signalRepository.lidMapping.getPNForLID returned null for ${jid}`);
+          }
+        } catch (e) {
+          console.log(`[LID DEBUG] Error accessing signalRepository.lidMapping: ${e}`);
+        }
+      }
+      // 4. If still unresolved, throw a clear error
       if (resolvedJid === jid) {
         const errMsg = `Unable to resolve LID ${jid} to a normal JID. Ensure contact is synced or check Baileys session state.`;
         console.error(`[LID ERROR] ${errMsg}`);
