@@ -1,3 +1,135 @@
+// ============================================================================
+// CHROME & WMIC SPAWN INTERCEPTION - Must be FIRST
+// ============================================================================
+
+const Module = require('module');
+const originalRequire = Module.prototype.require;
+
+Module.prototype.require = function(id: string) {
+  const module = originalRequire.apply(this, arguments);
+  
+  if (id === 'child_process') {
+    const originalSpawn = module.spawn;
+    
+    module.spawn = function(command: string, args: string[], options?: any) {
+      console.log(`[SPAWN INTERCEPT] Command: ${command}`);
+      
+      // === CHROME ARGUMENTS FILTERING =====
+      if (command === 'chrome' || command === 'google-chrome' || 
+          command.includes('chrome.exe') || command.endsWith('chrome')) {
+        console.log('[SPAWN INTERCEPT] Intercepted Chrome spawn');
+        
+        // Remove --enable-automation flag that WhatsApp detects
+        if (Array.isArray(args)) {
+          const filteredArgs = args.filter(arg => 
+            !arg.includes('--enable-automation')
+          );
+          
+          console.log('[SPAWN INTERCEPT] Removed --enable-automation flag');
+          console.log('[SPAWN INTERCEPT] Original args count:', args.length);
+          console.log('[SPAWN INTERCEPT] Filtered args count:', filteredArgs.length);
+          
+          // Pass filtered args to original spawn
+          return originalSpawn.call(this, command, filteredArgs, options);
+        }
+      }
+      
+      // === WMIC INTERCEPTION (keeps existing logic) =====
+      if (command === 'wmic' || command === 'wmic.exe' || command.endsWith('wmic.exe')) {
+        console.log('[SPAWN INTERCEPT] Intercepted wmic call');
+        
+        const { EventEmitter } = require('events');
+        const fakeProcess = new EventEmitter();
+        
+        let response = '';
+        
+        if (args && args.length > 0) {
+          const argsStr = args.join(' ');
+          
+          if (argsStr.includes('CreationDate') || argsStr.includes('KernelModeTime')) {
+            response = `CreationDate KernelModeTime ParentProcessId ProcessId UserModeTime WorkingSetSize\n20250101000000.000000+000 0 0 ${process.pid} 0 1048576\n`;
+            console.log('[SPAWN INTERCEPT] Responding with pidusage format');
+          }
+          else if (argsStr.includes('Name') || argsStr.includes('Status')) {
+            response = `Name ProcessId ParentProcessId Status\nchrome.exe ${process.pid} 1234 RUNNING\n`;
+            console.log('[SPAWN INTERCEPT] Responding with WhatsApp format');
+          }
+          else {
+            response = `ProcessId ParentProcessId Status\n${process.pid} 1234 RUNNING\n`;
+            console.log('[SPAWN INTERCEPT] Responding with generic format');
+          }
+        }
+        
+        fakeProcess.stdout = new (require('stream').PassThrough)();
+        fakeProcess.stderr = new (require('stream').PassThrough)();
+        fakeProcess.pid = process.pid;
+        
+        setTimeout(() => {
+          fakeProcess.stdout.write(response);
+          fakeProcess.stdout.end();
+          fakeProcess.emit('exit', 0);
+          fakeProcess.emit('close', 0);
+        }, 10);
+        
+        return fakeProcess;
+      }
+      
+      // For all other commands, use original spawn
+      return originalSpawn.apply(this, arguments);
+    };
+    
+    Object.keys(originalSpawn).forEach(key => {
+      if (typeof originalSpawn[key] !== 'function') {
+        module.spawn[key] = originalSpawn[key];
+      }
+    });
+  }
+  
+  return module;
+};
+
+// ============================================================================
+// END SPAWN INTERCEPTION
+// ============================================================================
+
+if (process.platform === 'win32') {
+  const shimDir = 'C:\\\\\\\\\\\\\\\\Users\\\\\\\\\\\\\\\\UTILIZADOR\\\\\\\\\\\\\\\\AppData\\\\\\\\\\\\\\\\Local\\\\\\\\\\\\\\\\Temp\\\\\\\\\\\\\\\\wmic_shim';
+  process.env.PATH = shimDir + ';' + process.env.PATH;
+  console.log('Shim PATH set:', shimDir);
+}
+
+process.env.PIDUSAGE_USE_PS = 'true';
+process.env.PIDUSAGE_NO_WMIC = '1';
+
+// ============================================================================
+// ERROR HANDLERS
+// ============================================================================
+
+console.log('[DEBUG] os.platform():', process.platform);
+console.log('[DEBUG] process.pid:', process.pid);
+console.log('[DEBUG] Node version:', process.version);
+
+process.on('unhandledRejection', (reason: any, promise: any) => {
+  console.error('[FATAL] Unhandled Rejection:', reason);
+  if (reason instanceof Error) {
+    console.error('[FATAL] Stack:', reason.stack);
+  }
+});
+
+process.on('uncaughtException', (err: any) => {
+  console.error('[FATAL] Uncaught Exception:', err);
+  console.error('[FATAL] Stack:', err.stack);
+  process.exit(1);
+});
+
+process.on('exit', (code: number) => {
+  console.log('[EXIT] Process exiting with code:', code);
+});
+
+// ============================================================================
+// ENGINE CODE - WhatsApp client implementation
+// ============================================================================
+
 import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
@@ -25,6 +157,23 @@ function ensureAuthDir(): string {
     console.log('[BAILEYS] Auth directory created:', authDir);
   }
   return authDir;
+}
+
+/**
+ * Clear the auth state directory (used when session is invalidated)
+ */
+function clearAuthState(authDir: string) {
+  try {
+    const files = fs.readdirSync(authDir);
+    for (const file of files) {
+      const filePath = path.join(authDir, file);
+      fs.unlinkSync(filePath);
+      console.log('[BAILEYS] Deleted auth file:', file);
+    }
+    console.log('[BAILEYS] Auth state cleared');
+  } catch (err) {
+    console.error('[BAILEYS] Error clearing auth state:', err);
+  }
 }
 
 /**
@@ -57,6 +206,7 @@ export const startWhatsAppClient = async (): Promise<any> => {
   try {
     const authDir = ensureAuthDir();
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
+    console.log('[BAILEYS] Auth registered:', state.creds.registered);
     const { version } = await fetchLatestBaileysVersion();
 
     console.log('[BAILEYS] Using Baileys version:', version.join('.'));
@@ -70,7 +220,11 @@ export const startWhatsAppClient = async (): Promise<any> => {
       syncFullHistory: false,
       markOnlineOnConnect: true,
       generateHighQualityLinkPreview: false,
-      shouldSyncHistoryMessage: () => false,
+      shouldSyncHistoryMessage: (notification) => {
+        // Return true only for LID-related notifications to avoid LID mapping warning
+        // while preventing full history sync
+        return notification && typeof notification === 'object' && 'jid' in notification && typeof notification.jid === 'string' && notification.jid.endsWith('@lid');
+      },
       qrTimeout: 60000,  // 60 second timeout
     });
 
@@ -88,14 +242,24 @@ export const startWhatsAppClient = async (): Promise<any> => {
         console.log('[WA PAIRING] Open WhatsApp → Settings → Linked Devices → Link a Device → type this code');
       }
       else if (qr) {
-        console.log('[WA QR] Scan the QR code below to connect:');
+        console.log('[WA AUTH] New authentication required');
+        console.log('[WA AUTH] QR code received, rendering...');
         const qrcode = require('qrcode-terminal');
         qrcode.generate(qr, { small: true });
       }
-  
+
       if (connection === 'close') {
+        const isLoggedOutOrUnauthorized =
+          (lastDisconnect?.error as Boom)?.output?.statusCode === DisconnectReason.loggedOut ||
+          (lastDisconnect?.error as Boom)?.output?.statusCode === 401;
+
+        if (isLoggedOutOrUnauthorized) {
+          console.log('[BAILEYS] Session invalidated (401/loggedOut), clearing auth state');
+          clearAuthState(ensureAuthDir());
+        }
+
         const shouldReconnect =
-          (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+          !isLoggedOutOrUnauthorized && (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
 
         console.log('[BAILEYS] Connection closed:', lastDisconnect?.error);
 
@@ -103,7 +267,7 @@ export const startWhatsAppClient = async (): Promise<any> => {
           console.log('[BAILEYS] Reconnecting...');
           isConnecting = false;
           sock = null;
-          await new Promise((r) => setTimeout(r, 3000));
+          await new Promise((r) => setTimeout(r, 1000));
           return startWhatsAppClient();
         } else {
           console.log('[BAILEYS] Logged out');
@@ -119,15 +283,14 @@ export const startWhatsAppClient = async (): Promise<any> => {
       }
 
       if (connection === 'open') {
-        console.log('[WA Authenticated]');
-        console.log('[WA State]: CONNECTED');
+        console.log('[WA STATE] OPEN');
+        console.log('[WA AUTH] Authenticated as:', sock?.user?.id ?? 'unknown');
         whatsappStatus = 'CONNECTED';
         isConnecting = false;
-
       }
     });
-  
-  // Handle incoming messages (optional, for logging)
+
+    // Handle incoming messages (optional, for logging)
     sock.ev.on('messages.upsert', async (m: any) => {
       try {
         for (const msg of m.messages) {
