@@ -364,6 +364,39 @@ export const sendMessage = async (jid: string, text: string): Promise<void> => {
   if (sock) {
     console.log(`[DEBUG] sock.user: ${JSON.stringify(sock.user)}`);
     console.log(`[DEBUG] sock.connectionState: ${sock?.connection?.connection ?? 'unknown'}`);
+    // LID resolution for outbound messages
+    if (jid.endsWith('@lid')) {
+      console.log(`[LID DEBUG] Attempting to resolve LID jid: ${jid}`);
+      let resolvedJid = jid;
+      // 1. Try to resolve via sock.contacts (map of normal JID -> contact info)
+      if (sock && sock.contacts) {
+        try {
+          const entries = Object.entries(sock.contacts);
+          for (const [possibleJid, contact] of entries) {
+            if (contact && typeof contact === 'object' && 'lid' in contact && contact.lid === jid) {
+              resolvedJid = possibleJid;
+              console.log(`[LID RESOLVE] Found contact by lid: ${jid} -> ${resolvedJid}`);
+              break;
+            }
+          }
+        } catch (e) {
+          console.log(`[LID DEBUG] Error accessing sock.contacts: ${e}`);
+        }
+      }
+      // 2. If not found in contacts, check if the LID belongs to the bot itself
+      if (resolvedJid === jid && sock && sock.user?.lid === jid) {
+        resolvedJid = sock.user.id;
+        console.log(`[LID RESOLVE] LID belongs to bot: ${jid} -> ${resolvedJid}`);
+      }
+      // 3. If still unresolved, throw a clear error
+      if (resolvedJid === jid) {
+        const errMsg = `Unable to resolve LID ${jid} to a normal JID. Ensure contact is synced or check Baileys session state.`;
+        console.error(`[LID ERROR] ${errMsg}`);
+        throw new Error(errMsg);
+      }
+      // Use resolved Jid for the actual send
+      jid = resolvedJid;
+    }
   }
 
   try {
