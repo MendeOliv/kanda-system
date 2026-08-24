@@ -21,6 +21,18 @@ export class CompositeAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Check if the request is for the WhatsApp message endpoint
+    const request = context.switchToHttp().getRequest();
+    const path = request.path.replace(/\/+$/, ''); // Remove trailing slashes
+    if (path === '/api/whatsapp/message') {
+      const internalKey = request.header('x-internal-key');
+      const expectedKey = process.env.BACKEND_API_TOKEN;
+      if (internalKey && expectedKey && internalKey === expectedKey) {
+        return true;
+      }
+      throw new UnauthorizedException('Invalid internal API key');
+    }
+
     // Check if endpoint is public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),

@@ -41,50 +41,56 @@ export function normalizeWhatsAppMessage(message: any): WhatsAppIncomingMessage 
   const from = message.key?.remoteJid ?? '';
   const to = message.key?.participant ?? message.key?.remoteJid ?? undefined; // participant is for group messages, but to is usually our own number; we'll approximate
   const timestamp = message.messageTimestamp ?? Date.now();
-  const typeRaw = message.message ?? {}; // We'll check which property exists
+  const messageType = message.message ?? {}; // We'll check which property exists
 
   // Map Baileys message types to our string union
   let type: WhatsAppIncomingMessage['type'] = 'unknown';
   let mediaUrl: string | undefined;
   let caption: string | undefined;
 
-  if (message.message?.conversation) {
+  // Handle text messages: conversation and extendedTextMessage
+  const text =
+    messageType.conversation ??
+    messageType.extendedTextMessage?.text ??
+    '';
+
+  if (text !== '') {
     type = 'text';
-  } else if (message.message?.imageMessage) {
+  } else if (messageType.imageMessage) {
     type = 'image';
-    mediaUrl = message.message.imageMessage.url ?? undefined;
-    caption = message.message.imageMessage.caption ?? undefined;
-  } else if (message.message?.videoMessage) {
+    mediaUrl = messageType.imageMessage.url ?? undefined;
+    caption = messageType.imageMessage.caption ?? undefined;
+  } else if (messageType.videoMessage) {
     type = 'video';
-    mediaUrl = message.message.videoMessage.url ?? undefined;
-    caption = message.message.videoMessage.caption ?? undefined;
-  } else if (message.message?.audioMessage) {
+    mediaUrl = messageType.videoMessage.url ?? undefined;
+    caption = messageType.videoMessage.caption ?? undefined;
+  } else if (messageType.audioMessage) {
     type = 'audio';
-    mediaUrl = message.message.audioMessage.url ?? undefined;
-  } else if (message.message?.documentMessage) {
+    mediaUrl = messageType.audioMessage.url ?? undefined;
+  } else if (messageType.documentMessage) {
     type = 'document';
-    mediaUrl = message.message.documentMessage.url ?? undefined;
-    caption = message.message.documentMessage.caption ?? undefined;
-  } else if (message.message?.stickerMessage) {
+    mediaUrl = messageType.documentMessage.url ?? undefined;
+    caption = messageType.documentMessage.caption ?? undefined;
+  } else if (messageType.stickerMessage) {
     type = 'sticker';
-    mediaUrl = message.message.stickerMessage.url ?? undefined;
-  } else if (message.message?.locationMessage) {
+    mediaUrl = messageType.stickerMessage.url ?? undefined;
+  } else if (messageType.locationMessage) {
     type = 'location';
-    mediaUrl = message.message.locationMessage.url ?? undefined;
-    caption = message.message.locationMessage?.name ?? undefined;
-  } else if (message.message?.contactMessage) {
+    mediaUrl = messageType.locationMessage.url ?? undefined;
+    caption = messageType.locationMessage?.name ?? undefined;
+  } else if (messageType.contactMessage) {
     type = 'contact';
     // contact message doesn't have mediaUrl
   }
 
-  const forwarded = message.message?.ephemeralMessageTemplate?.forwarded ?? false;
+  const forwarded = messageType.ephemeralMessageTemplate?.forwarded ?? false;
   const fromMe = message.key?.fromMe ?? false;
 
   return {
     externalMessageId,
     from,
     to,
-    body: type === 'text' ? (message.message?.conversation ?? '') : '',
+    body: text,
     timestamp,
     type,
     mediaUrl,
@@ -181,13 +187,17 @@ function attachListeners(): void {
 
         console.log(`[ADAPTER] Received message: ${JSON.stringify(normalized)}`);
         // Forward normalized message to backend via HTTP
-        try {
-          await axios.post(`${config.backendUrl}/api/whatsapp/message`, normalized);
-          logger.info({ msg: '[ADAPTER] Message forwarded to backend', externalMessageId: normalized.externalMessageId });
-        } catch (httpError: any) {
-          logger.error({ msg: '[ADAPTER] Failed to forward message to backend', error: httpError.message, externalMessageId: normalized.externalMessageId });
-          // Don't re-throw - we don't want WhatsApp process to crash if backend is down
-        }
+                try {
+                  await axios.post(`${config.backendUrl}/api/whatsapp/message`, normalized, {
+                    headers: {
+                      'X-Internal-Key': config.backendApiToken,
+                    },
+                  });
+                  logger.info({ msg: '[ADAPTER] Message forwarded to backend', externalMessageId: normalized.externalMessageId });
+                } catch (httpError: any) {
+                  logger.error({ msg: '[ADAPTER] Failed to forward message to backend', error: httpError.message, externalMessageId: normalized.externalMessageId });
+                  // Don't re-throw - we don't want WhatsApp process to crash if backend is down
+                }
       }
     } catch (err) {
       console.error('[ADAPTER] Error processing message:', err);
