@@ -132,9 +132,9 @@ function attachListeners(): void {
 
     if (connection === 'close') {
       const shouldReconnect =
-        (lastDisconnect?.error as Boom)?.output?.statusCode !==
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assumption
-        (require('@whisockets/baileys').DisconnectReason.loggedOut as any); // Avoid importing DisconnectReason here
+              (lastDisconnect?.error as Boom)?.output?.statusCode !==
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assumption
+              (require('@whiskeysockets/baileys').DisconnectReason.loggedOut as any); // Avoid importing DisconnectReason here
       console.log('[ADAPTER] Connection closed:', lastDisconnect?.error);
 
       if (shouldReconnect) {
