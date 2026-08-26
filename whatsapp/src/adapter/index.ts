@@ -100,125 +100,200 @@ export function normalizeWhatsAppMessage(message: any): WhatsAppIncomingMessage 
   };
 }
 
-// Global state to avoid attaching listeners multiple times
-let _listenersAttached = false;
+// Simple TTL cache for idempotency
+class TTLCache {
+  private map: Map<string, number>;
+  private ttl: number;
+  private cleanupInterval: NodeJS.Timeout;
+
+  constructor(ttl: number, cleanupIntervalMs: number = 60000) {
+    this.map = new Map();
+    this.ttl = ttl;
+    this.cleanupInterval = setInterval(() => this.cleanup(), cleanupIntervalMs);
+  }
+
+  set(key: string): void {
+    const now = Date.now();
+    this.map.set(key, now);
+  }
+
+  has(key: string): boolean {
+    const now = Date.now();
+    const timestamp = this.map.get(key);
+    if (timestamp === undefined) {
+      return false;
+    }
+    if (now - timestamp > this.ttl) {
+      this.map.delete(key);
+      return false;
+    }
+    return true;
+  }
+
+  private cleanup(): void {
+    const now = Date.now();
+    for (const [key, timestamp] of this.map.entries()) {
+      if (now - timestamp > this.ttl) {
+        this.map.delete(key);
+      }
+    }
+  }
+
+  dispose(): void {
+    clearInterval(this.cleanupInterval);
+  }
+}
+
+// Cache for processed externalMessageIds (TTL 10 minutes)
+const processedMessagesCache = new TTLCache(10 * 60 * 1000); // 10 minutes
+
+// Global state to avoid attaching listeners multiple times per sock instance
+let lastSockForListeners: any = null;
 
 /**
  * Attach listeners to the engine's WhatsApp client.
- * This function will be called whenever the client is ready.
+ * This function will be called whenever we detect a new sock.
  */
-function attachListeners(): void {
-  const client = getClient();
-  if (!client) {
-    console.log('[ADAPTER] WhatsApp client not available yet');
-    return;
+function attachListenersToSock(sock: any): void {
+  if (!sock) return;
+  if (lastSockForListeners === sock) return;
+
+  // Detach from previous sock if any
+  if (lastSockForListeners) {
+    try {
+      lastSockForListeners.ev.off('connection.update', connectionListener);
+      lastSockForListeners.ev.off('messages.upsert', onMessageUpsert);
+    } catch (e) {
+      // Ignore error if not attached
+    }
   }
 
-  console.log('[ADAPTER] Attaching listeners to WhatsApp client');
+  // Attach connection.update listener
+  sock.ev.on('connection.update', connectionListener);
+  // Attach messages.upsert listener
+  sock.ev.on('messages.upsert', onMessageUpsert);
 
-  // Handle connection updates
-  client.ev.on('connection.update', async (update: any) => {
-    const { connection, lastDisconnect, qr, pairingCode } = update;
+  lastSockForListeners = sock;
+  console.log('[ADAPTER] Attached connection and messages.upsert listeners to sock');
+}
 
-    // NEW: Handle pairing code (Baileys 7.0+)
-    if (pairingCode) {
-      console.log('[ADAPTER] Pairing code (enter on WhatsApp):');
-      console.log(pairingCode);
-      console.log('[ADAPTER] Open WhatsApp → Settings → Linked Devices → Link a Device → type this code');
-    } else if (qr) {
-      console.log('[ADAPTER QR] QR code received, scan to connect');
-      // QR is available - display it
+/**
+ * Handle connection updates
+ */
+async function connectionListener(update: any): Promise<void> {
+  const { connection, lastDisconnect, qr, pairingCode } = update;
+
+  // NEW: Handle pairing code (Baileys 7.0+)
+  if (pairingCode) {
+    console.log('[ADAPTER] Pairing code (enter on WhatsApp):');
+    console.log(pairingCode);
+    console.log('[ADAPTER] Open WhatsApp → Settings → Linked Devices → Link a Device → type this code');
+  } else if (qr) {
+    console.log('[ADAPTER QR] QR code received, scan to connect');
+    // QR is available - display it
+  }
+
+  if (connection === 'close') {
+    const shouldReconnect =
+      (lastDisconnect?.error as Boom)?.output?.statusCode !==
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assumption
+      (require('@whiskeysockets/baileys').DisconnectReason.loggedOut as any); // Avoid importing DisconnectReason here
+    console.log('[ADAPTER] Connection closed:', lastDisconnect?.error);
+
+    if (shouldReconnect) {
+      console.log('[ADAPTER] Reconnecting...');
+      // Reconnection is handled by the engine; we just wait for it.
+      // Optionally, we could trigger a restart, but engine already does.
+    } else {
+      console.log('[ADAPTER] Logged out');
     }
+  }
 
-    if (connection === 'close') {
-      const shouldReconnect =
-              (lastDisconnect?.error as Boom)?.output?.statusCode !==
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assumption
-              (require('@whiskeysockets/baileys').DisconnectReason.loggedOut as any); // Avoid importing DisconnectReason here
-      console.log('[ADAPTER] Connection closed:', lastDisconnect?.error);
+  if (connection === 'connecting') {
+    console.log('[ADAPTER] Connecting...');
+  }
 
-      if (shouldReconnect) {
-        console.log('[ADAPTER] Reconnecting...');
-        // Reconnection is handled by the engine; we just wait for it.
-        // Optionally, we could trigger a restart, but engine already does.
-      } else {
-        console.log('[ADAPTER] Logged out');
+  if (connection === 'open') {
+    console.log('[ADAPTER] Authenticated and connected');
+  }
+}
+
+/**
+ * Process incoming messages.upsert event
+ */
+async function onMessageUpsert(m: any): Promise<void> {
+  console.log('[ADAPTER] messages.upsert event received'); // DEBUG
+  try {
+    const botJid = getClient()?.user?.id ?? '';
+    console.log(`[ADAPTER] Bot JID: ${botJid}`); // DEBUG
+    for (const msg of m.messages) {
+      if (!msg.message) continue;
+
+      // Check if it's a broadcast/status message (using Baileys helper)
+      const fromJid = msg.key?.remoteJid ?? '';
+      if (fromJid === '') {
+        console.log('[ADAPTER] Empty fromJid, skipping message'); // DEBUG
+        continue;
+      }
+      // NOTE: We do NOT filter @lid messages here as they can contain actual user messages
+      // from linked devices. Only filter by fromMe to prevent loops.
+
+      const normalized = normalizeWhatsAppMessage(msg);
+      console.log(`[ADAPTER] Normalized message: ${JSON.stringify(normalized)}`); // DEBUG
+      // Ignore messages sent by ourselves to prevent loops
+      if (normalized.fromMe === true) {
+        console.log('[ADAPTER] Ignoring message from self');
+        continue;
+      }
+
+      // Idempotency check: skip if we have already processed this externalMessageId
+      if (processedMessagesCache.has(normalized.externalMessageId)) {
+        console.log(`[ADAPTER] Duplicate message ignored: ${normalized.externalMessageId}`);
+        logger.info({ msg: '[ADAPTER] Duplicate message ignored', externalMessageId: normalized.externalMessageId });
+        continue;
+      }
+      // Mark as processed
+      processedMessagesCache.set(normalized.externalMessageId);
+
+      // Override the 'to' field with the bot's own JID
+      if (botJid) {
+        normalized.to = botJid;
+      }
+
+      console.log(`[ADAPTER] Received message: ${JSON.stringify(normalized)}`);
+      // Forward normalized message to backend via HTTP
+      try {
+        console.log(`[AUTH DEBUG] Adapter: backendUrl=${config.backendUrl}`);
+        console.log(`[AUTH DEBUG] Adapter: backendApiToken present: ${!!config.backendApiToken}, length: ${config.backendApiToken?.length ?? 0}`);
+        await axios.post(`${config.backendUrl}/api/whatsapp/message`, normalized, {
+          headers: {
+            'X-Internal-Key': config.backendApiToken,
+          },
+        });
+        logger.info({ msg: '[ADAPTER] Message forwarded to backend', externalMessageId: normalized.externalMessageId });
+      } catch (httpError: any) {
+        logger.error({ msg: '[ADAPTER] Failed to forward message to backend', error: httpError.message, externalMessageId: normalized.externalMessageId });
+        // Don't re-throw - we don't want WhatsApp process to crash if backend is down
       }
     }
-
-    if (connection === 'connecting') {
-      console.log('[ADAPTER] Connecting...');
-    }
-
-    if (connection === 'open') {
-      console.log('[ADAPTER] Authenticated and connected');
-    }
-  });
-
-  // Handle incoming messages
-  client.ev.on('messages.upsert', async (m: any) => {
-    console.log('[ADAPTER] messages.upsert event received'); // DEBUG
-    try {
-      const botJid = client?.user?.id ?? '';
-      console.log(`[ADAPTER] Bot JID: ${botJid}`); // DEBUG
-      for (const msg of m.messages) {
-        if (!msg.message) continue;
-
-        // Check if it's a broadcast/status message (using Baileys helper)
-        const fromJid = msg.key?.remoteJid ?? '';
-        if (fromJid === '') {
-          console.log('[ADAPTER] Empty fromJid, skipping message'); // DEBUG
-          continue;
-        }
-        // NOTE: We do NOT filter @lid messages here as they can contain actual user messages
-        // from linked devices. Only filter by fromMe to prevent loops.
-
-        const normalized = normalizeWhatsAppMessage(msg);
-        console.log(`[ADAPTER] Normalized message: ${JSON.stringify(normalized)}`); // DEBUG
-        // Ignore messages sent by ourselves to prevent loops
-        if (normalized.fromMe === true) {
-          console.log('[ADAPTER] Ignoring message from self');
-          continue;
-        }
-        // Override the 'to' field with the bot's own JID
-        if (botJid) {
-          normalized.to = botJid;
-        }
-
-        console.log(`[ADAPTER] Received message: ${JSON.stringify(normalized)}`);
-        // Forward normalized message to backend via HTTP
-                try {
-                  console.log(`[AUTH DEBUG] Adapter: backendUrl=${config.backendUrl}`);
-                  console.log(`[AUTH DEBUG] Adapter: backendApiToken present: ${!!config.backendApiToken}, length: ${config.backendApiToken?.length ?? 0}`);
-                  await axios.post(`${config.backendUrl}/api/whatsapp/message`, normalized, {
-                    headers: {
-                      'X-Internal-Key': config.backendApiToken,
-                    },
-                  });
-                  logger.info({ msg: '[ADAPTER] Message forwarded to backend', externalMessageId: normalized.externalMessageId });
-                } catch (httpError: any) {
-                  logger.error({ msg: '[ADAPTER] Failed to forward message to backend', error: httpError.message, externalMessageId: normalized.externalMessageId });
-                  // Don't re-throw - we don't want WhatsApp process to crash if backend is down
-                }
-      }
-    } catch (err) {
-      console.error('[ADAPTER] Error processing message:', err);
-      logger.error({ msg: '[ADAPTER] Error processing message', err });
-    }
-  });
+  } catch (err) {
+    console.error('[ADAPTER] Error processing message:', err);
+    logger.error({ msg: '[ADAPTER] Error processing message', err });
+  }
 }
 
 /**
  * Start the WhatsApp client using Baileys (delegates to engine).
  */
 export const startWhatsAppAdapter = async (): Promise<any> => {
-  console.log('[ADAPTER] Starting WhatsApp adapter'); // DEBUG
+  console.log('[ADAPTER] Starting WhatsApp adapter');
   await startWhatsAppClient(); // Ensure the engine client is started
-  if (!_listenersAttached) {
-    attachListeners();
-    _listenersAttached = true;
-  }
-  console.log('[ADAPTER] WhatsApp adapter started'); // DEBUG
+  // Attach listeners to the current sock and set up interval to monitor for changes
+  attachListenersToSock(getClient());
+  setInterval(() => {
+    attachListenersToSock(getClient());
+  }, 1000);
+  console.log('[ADAPTER] WhatsApp adapter started');
   return getClient();
 };
 
@@ -234,6 +309,8 @@ export const getAdapterClient = (): any => {
  */
 export const destroyWhatsAppAdapter = async (): Promise<void> => {
   await destroyWhatsAppClient();
+  // Dispose of the TTL cache to stop cleanup interval
+  processedMessagesCache.dispose();
 };
 
 export default {

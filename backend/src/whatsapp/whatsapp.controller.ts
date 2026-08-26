@@ -5,6 +5,7 @@ import { IncomingMessageDto } from './dto/incoming-message.dto';
 import { Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AIService } from '../ai/ai.service';
+import { ConversationService } from '../conversation/conversation.service';
 
 @ApiTags('whatsapp')
 @Controller('whatsapp')
@@ -14,6 +15,7 @@ export class WhatsAppController {
   constructor(
     private readonly whatsappService: WhatsAppService,
     private readonly aiService: AIService,
+    private readonly conversationService: ConversationService,
   ) {}
 
   @Post('send')
@@ -36,22 +38,61 @@ export class WhatsAppController {
   async receiveMessage(@Body() incomingMessageDto: IncomingMessageDto) {
     this.logger.log(`Received WhatsApp message: ${JSON.stringify(incomingMessageDto)}`);
 
-    const { from, body } = incomingMessageDto;
+    const { from, body, externalMessageId } = incomingMessageDto;
     this.logger.log(`Iniciando processamento IA para mensagem de ${from}: ${body.substring(0, 50)}...`);
 
-    let responseText = '';
-    try {
-      responseText = await this.aiService.generateResponse(body);
-    } catch (error) {
-      this.logger.error(`Erro ao gerar resposta com IA: ${error.message}`);
-      responseText = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.';
-    }
+    // Use conversation lock to ensure sequential processing for the same conversation
+    return this.conversationService.withConversationLock(from, async () => {
+      // Check idempotency: if we've already processed this externalMessageId this externalMessageId, skip
+      const messageExists = await this.conversationService.messageExists(externalMessageId);
+      if (messageExists) {
+        this.logger.log(`Duplicate externalMessageId ${externalMessageId} ignored`);
+        return { status: 'Message received (duplicate ignored)' };
+      }
 
-    this.logger.log(`Resposta gerada pela IA: ${responseText.substring(0, 50)}...`);
-    await this.whatsappService.sendMessage(from, responseText);
-    this.logger.log(`Resposta enviada para ${from}`);
+      // Get or create conversation for this customer (WhatsApp JID/phone)
+      const conversation = await this.conversationService.getOrCreateConversation(from);
+      this.logger.log(`Conversation ID: ${conversation.id}`);
 
-    return { status: 'Message received' };
+      // Persist the user message
+      const userMessage = await this.conversationService.addMessage(conversation.id, {
+        externalMessageId,
+        role: 'USER',
+        content: body,
+        timestamp: new Date(incomingMessageDto.timestamp),
+        metadata: { type: incomingMessageDto.type }, // store original type if needed
+      });
+      this.logger.log(`User message saved with ID: ${userMessage.id}`);
+
+      // Load recent conversation history (last 10 messages, most recent first)
+      const recentMessages = await this.conversationService.getRecentMessages(conversation.id, 10);
+      this.logger.log(`Retrieved ${recentMessages.length} recent messages for context`);
+
+      // Generate AI response using the history
+      let responseText = '';
+      try {
+        responseText = await this.aiService.generateResponseWithHistory(body, recentMessages);
+      } catch (error) {
+        this.logger.error(`Erro ao gerar resposta com IA: ${error.message}`);
+        responseText = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.';
+      }
+
+      this.logger.log(`Resposta gerada pela IA: ${responseText.substring(0, 50)}...`);
+
+      // Persist the assistant message
+      const assistantMessage = await this.conversationService.addMessage(conversation.id, {
+        role: 'ASSISTANT',
+        content: responseText,
+        timestamp: new Date(),
+      });
+      this.logger.log(`Assistant message saved with ID: ${assistantMessage.id}`);
+
+      // Send the response back to the user via WhatsApp
+      await this.whatsappService.sendMessage(from, responseText);
+      this.logger.log(`Resposta enviada para ${from}`);
+
+      return { status: 'Message received' };
+    });
   }
 
   @Get('status')
