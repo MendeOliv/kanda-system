@@ -134,23 +134,24 @@ export class ProductsService {
   }
 
   async search(query: string) {
-    if (!query || query.trim().length === 0) return [];
+      if (!query || query.trim().length === 0) return [];
 
-    const q = query.trim();
-    const products = await this.prisma.product.findMany({
-      where: {
-        status: 'active',
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { sku: { startsWith: q, mode: 'insensitive' } },
-          { description: { contains: q, mode: 'insensitive' } },
-        ],
-      },
-      take: 10,
-    });
+      const q = query.trim();
+      const products = await this.prisma.product.findMany({
+        where: {
+          status: 'active',
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { sku: { startsWith: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        take: 10,
+        include: { category: true },
+      });
 
-    return products.map((c) => this.toNumber(c));
-  }
+      return products.map((c) => this.toNumber(c));
+    }
 
   async update(id: string, updateProductDto: UpdateProductDto | any) {
     const product = await this.prisma.product.findUnique({ where: { id } });

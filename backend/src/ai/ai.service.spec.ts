@@ -15,6 +15,7 @@ jest.mock('@google/generative-ai', () => {
 import { Test, TestingModule } from '@nestjs/testing';
 import { AIService } from './ai.service';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('AIService', () => {
   let service: AIService;
@@ -38,6 +39,7 @@ describe('AIService', () => {
             }),
           },
         },
+        { provide: PrismaService, useValue: {} },
       ],
     }).compile();
 
@@ -69,6 +71,7 @@ describe('AIService', () => {
             }),
           },
         },
+        { provide: PrismaService, useValue: {} },
       ],
     }).compile();
 
