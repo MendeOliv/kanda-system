@@ -2,18 +2,59 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
+export interface CartReturn {
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    price: number;
+    product: {
+      id: string;
+      name: string;
+      price: number;
+      stock: number;
+      active: boolean;
+      discountPrice?: number | null;
+    };
+  }>;
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  idempotent?: boolean;
+}
+
 @Injectable()
 export class CartService {
   constructor(private prisma: PrismaService) {}
 
-  private async findOrCreateCart(userId: string) {
+  /**
+   * Get or create a cart for the user, handling concurrent creation safely.
+   * @param userId
+   */
+  private async getOrCreateCart(userId: string) {
+    // Try to find existing cart
     let cart = await this.prisma.cart.findUnique({ where: { userId } });
-    if (!cart) {
+    if (cart) {
+      return cart;
+    }
+    // If not found, try to create; if unique constraint occurs, retry find
+    try {
       cart = await this.prisma.cart.create({
         data: { userId, subtotal: 0, deliveryFee: 0, total: 0 },
       });
+      return cart;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        // Another request created the cart concurrently; fetch it
+        cart = await this.prisma.cart.findUnique({ where: { userId } });
+        if (!cart) {
+          // This should not happen, but if it does, rethrow
+          throw err;
+        }
+        return cart;
+      }
+      throw err;
     }
-    return cart;
   }
 
   private async recalc(cartId: string) {
@@ -36,7 +77,7 @@ export class CartService {
   }
 
   private async getCartWithItems(userId: string) {
-    const cart = await this.findOrCreateCart(userId);
+    const cart = await this.getOrCreateCart(userId);
     return this.prisma.cart.findUnique({
       where: { id: cart.id },
       include: {
@@ -57,7 +98,23 @@ export class CartService {
     };
   }
 
-  async addItem(userId: string, productId: string, quantity: number) {
+  async addItem(
+    userId: string,
+    productId: string,
+    quantity: number,
+    externalMessageId: string = '',
+  ) {
+    // Idempotency check (only if externalMessageId is provided)
+    if (externalMessageId) {
+      const existing = await this.prisma.processedMessage.findUnique({
+        where: { externalMessageId },
+      });
+      if (existing) {
+        const cart = await this.getCart(userId);
+        return { success: true, cart, idempotent: true };
+      }
+    }
+
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
     });
@@ -67,53 +124,156 @@ export class CartService {
       throw new BadRequestException('Stock insuficiente');
     }
 
-    const cart = await this.findOrCreateCart(userId);
+    // Get or create cart safely (outside transaction)
+    const cart = await this.getOrCreateCart(userId);
     const price = product.discountPrice || product.price;
 
-    await this.prisma.cartItem.upsert({
-      where: { cartId_productId: { cartId: cart.id, productId } },
-      update: { quantity: { increment: quantity }, price },
-      create: { cartId: cart.id, productId, quantity, price },
+    // Perform atomic operations inside transaction
+    const updatedCart = await this.prisma.$transaction(async (tx) => {
+      // Upsert cart item
+      await tx.cartItem.upsert({
+        where: { cartId_productId: { cartId: cart.id, productId } },
+        update: { quantity: { increment: quantity }, price },
+        create: { cartId: cart.id, productId, quantity, price },
+      });
+
+      // Record processed message for idempotency (only if externalMessageId is provided)
+      if (externalMessageId) {
+        await tx.processedMessage.create({
+          data: { externalMessageId, userId },
+        });
+      }
+
+      // Recalculate cart totals
+      return this.recalc(cart.id);
     });
 
-    const result = await this.recalc(cart.id);
-    return { success: true, cart: result };
+    return { success: true, cart: updatedCart, idempotent: undefined };
   }
 
-  async updateItem(userId: string, productId: string, quantity: number) {
-    const cart = await this.findOrCreateCart(userId);
-
-    if (quantity <= 0) {
-      await this.prisma.cartItem.delete({
-        where: { cartId_productId: { cartId: cart.id, productId } },
+  async updateItem(
+    userId: string,
+    productId: string,
+    quantity: number,
+    externalMessageId: string = '',
+  ) {
+    // Idempotency check (only if externalMessageId is provided)
+    if (externalMessageId) {
+      const existing = await this.prisma.processedMessage.findUnique({
+        where: { externalMessageId },
       });
-    } else {
-      await this.prisma.cartItem.update({
-        where: { cartId_productId: { cartId: cart.id, productId } },
-        data: { quantity },
-      });
+      if (existing) {
+        const cart = await this.getCart(userId);
+        return { success: true, cart, idempotent: true };
+      }
     }
 
-    const result = await this.recalc(cart.id);
-    return { success: true, cart: result };
-  }
+    // Get or create cart safely (outside transaction)
+    const cart = await this.getOrCreateCart(userId);
 
-  async removeItem(userId: string, productId: string) {
-    const cart = await this.findOrCreateCart(userId);
-    await this.prisma.cartItem.delete({
-      where: { cartId_productId: { cartId: cart.id, productId } },
-    }).catch(() => {
-      // Item não existia — ignorar
+    // Perform atomic operations inside transaction
+    const updatedCart = await this.prisma.$transaction(async (tx) => {
+      if (quantity <= 0) {
+        await tx.cartItem.delete({
+          where: { cartId_productId: { cartId: cart.id, productId } },
+        }).catch(() => {
+          // Item não existia — ignorar
+        });
+      } else {
+        await tx.cartItem.update({
+          where: { cartId_productId: { cartId: cart.id, productId } },
+          data: { quantity },
+        });
+      }
+
+      // Record processed message for idempotency (only if externalMessageId is provided)
+      if (externalMessageId) {
+        await tx.processedMessage.create({
+          data: { externalMessageId, userId },
+        });
+      }
+
+      // Recalculate cart totals
+      return this.recalc(cart.id);
     });
 
-    const result = await this.recalc(cart.id);
-    return { success: true, cart: result };
+    return { success: true, cart: updatedCart, idempotent: undefined };
   }
 
-  async clearCart(userId: string) {
-    const cart = await this.findOrCreateCart(userId);
-    await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
-    await this.recalc(cart.id);
-    return { success: true };
+  async removeItem(
+    userId: string,
+    productId: string,
+    externalMessageId: string = '',
+  ) {
+    // Idempotency check (only if externalMessageId is provided)
+    if (externalMessageId) {
+      const existing = await this.prisma.processedMessage.findUnique({
+        where: { externalMessageId },
+      });
+      if (existing) {
+        const cart = await this.getCart(userId);
+        return { success: true, cart, idempotent: true };
+      }
+    }
+
+    // Get or create cart safely (outside transaction)
+    const cart = await this.getOrCreateCart(userId);
+
+    // Perform atomic operations inside transaction
+    const updatedCart = await this.prisma.$transaction(async (tx) => {
+      await tx.cartItem.delete({
+        where: { cartId_productId: { cartId: cart.id, productId } },
+      }).catch(() => {
+        // Item não existia — ignorar
+      });
+
+      // Record processed message for idempotency (only if externalMessageId is provided)
+      if (externalMessageId) {
+        await tx.processedMessage.create({
+          data: { externalMessageId, userId },
+        });
+      }
+
+      // Recalculate cart totals
+      return this.recalc(cart.id);
+    });
+
+    return { success: true, cart: updatedCart, idempotent: undefined };
+  }
+
+  async clearCart(
+    userId: string,
+    externalMessageId: string = '',
+  ) {
+    // Idempotency check (only if externalMessageId is provided)
+    if (externalMessageId) {
+      const existing = await this.prisma.processedMessage.findUnique({
+        where: { externalMessageId },
+      });
+      if (existing) {
+        const cart = await this.getCart(userId);
+        return { success: true, cart, idempotent: true };
+      }
+    }
+
+    // Get or create cart safely (outside transaction)
+    const cart = await this.getOrCreateCart(userId);
+
+    // Perform atomic operations inside transaction
+    const updatedCart = await this.prisma.$transaction(async (tx) => {
+      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+      // Record processed message for idempotency (only if externalMessageId is provided)
+      if (externalMessageId) {
+        await tx.processedMessage.create({
+          data: { externalMessageId, userId },
+        });
+      }
+
+      // Recalculate cart totals
+      return this.recalc(cart.id);
+    });
+
+    return { success: true, cart: updatedCart, idempotent: undefined };
   }
 }
