@@ -18,7 +18,7 @@ export class AIService {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
-      const modelName = this.configService.get<string>('GEMINI_MODEL') || 'gemini-3.6-flash';
+      const modelName = this.configService.get<string>('GEMINI_MODEL') || 'gemini-2.0-flash';
       const systemPrompt = `Você é um assistente da Kanda. Responda em português de forma objetiva e útil.
 Você tem acesso a uma ferramenta de busca no catálogo de produtos. Quando o usuário perguntar sobre produtos, preços, estoque ou disponibilidade, você deve usar a ferramenta search_catalog para obter informações reais do banco de dados. Não invente informações.
 Se o usuário perguntar sobre algo que não seja produto, você pode responder diretamente, mas se for sobre produtos, use a ferramenta.
@@ -212,6 +212,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
       this.logger.error(`Erro ao processar com Gemini: ${error instanceof Error ? error.stack : JSON.stringify(error)}`);
       // Depending on the error, we can return a friendly message or rethrow
       // For now, we'll return a generic error message to not break the flow
+      this.logger.error(`Gemini API error details: ${error?.status || 'unknown'} ${error?.error?.message || error?.message || JSON.stringify(error)}`);
       return 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.';
     }
   }

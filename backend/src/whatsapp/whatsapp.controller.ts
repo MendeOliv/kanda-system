@@ -73,7 +73,7 @@ export class WhatsAppController {
       try {
         responseText = await this.aiService.generateResponseWithHistory(body, recentMessages);
       } catch (error) {
-        this.logger.error(`Erro ao gerar resposta com IA: ${error.message}`);
+        this.logger.error(`Erro ao gerar resposta com IA: ${error.message}`, error.stack);
         responseText = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.';
       }
 
