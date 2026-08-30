@@ -97,9 +97,24 @@ describe('AIService', () => {
     expect(result).toBe(mockResponseText);
     expect(mockGenerateContent).toHaveBeenCalled();
     const promptArg = mockGenerateContent.mock.calls[0][0];
-    expect(typeof promptArg).toBe('string');
-    expect(promptArg).toContain('Você é um assistente da Kanda');
-    expect(promptArg).toContain('Usuário: Hello');
+    expect(promptArg).toBeDefined();
+    expect(promptArg).toHaveProperty('contents');
+    expect(promptArg).toHaveProperty('tools');
+    expect(promptArg).toHaveProperty('toolConfig');
+    // Check the contents array
+    expect(promptArg.contents).toHaveLength(1);
+    expect(promptArg.contents[0]).toEqual({
+      role: 'user',
+      parts: [{ text: 'Hello' }],
+    });
+    // Check that tools is an array with one element containing functionDeclarations
+    expect(Array.isArray(promptArg.tools)).toBe(true);
+    expect(promptArg.tools.length).toBe(1);
+    expect(promptArg.tools[0]).toHaveProperty('functionDeclarations');
+    // Check toolConfig
+    expect(promptArg.toolConfig).toHaveProperty('functionCallingConfig');
+    expect(promptArg.toolConfig.functionCallingConfig).toHaveProperty('mode');
+    expect(promptArg.toolConfig.functionCallingConfig.mode).toBe('AUTO');
   });
 
   it('should handle empty response from Gemini', async () => {

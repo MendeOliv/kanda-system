@@ -52,6 +52,10 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
       return 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.';
     }
 
+    // Handle null/undefined parameters gracefully
+    const safeMessage = message ?? '';
+    const safeHistory = conversationHistory ?? [];
+
     // Build the conversation history in the format expected by Gemini
     // We do NOT add the system prompt as a message because it's already set via systemInstruction
     const contents: any[] = [];
@@ -68,14 +72,14 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
         // Note: We don't expect SYSTEM messages in the conversation history
         contents.push({
           role: role,
-          parts: [{ text: msg.content }],
+          parts: [{ text: msg.content ?? '' }],
         });
       }
     }
     // Current user message
     contents.push({
       role: 'user' as const,
-      parts: [{ text: message }],
+      parts: [{ text: safeMessage }],
     });
 
     // Define the search_catalog function declaration
@@ -155,7 +159,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
               parts: [call],
             });
             contents.push({
-              role: 'model' as const,
+              role: 'user' as const,
               parts: [
                 {
                   functionResponse: {
@@ -175,11 +179,6 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
         // IMPORTANT: Set functionCallingConfig to 'NONE' to prevent further function calls
         const finalResult = await this.model.generateContent({
           contents,
-          tools: [
-            {
-              functionDeclarations: [searchCatalogFunction],
-            },
-          ],
           toolConfig: {
             functionCallingConfig: {
               mode: 'NONE',
@@ -210,7 +209,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
       );
       return text.trim();
     } catch (error) {
-      this.logger.error(`Erro ao processar com Gemini: ${error.message}`);
+      this.logger.error(`Erro ao processar com Gemini: ${error instanceof Error ? error.stack : JSON.stringify(error)}`);
       // Depending on the error, we can return a friendly message or rethrow
       // For now, we'll return a generic error message to not break the flow
       return 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.';
