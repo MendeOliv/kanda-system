@@ -11,7 +11,6 @@ export class OrdersService {
   constructor(private prisma: PrismaService, private cartService: CartService) {}
 
   private async resolveUser(identifier: string) {
-    // Aceita quer o id interno, quer o firebaseUid
     let user = await this.prisma.user.findUnique({
       where: { firebaseUid: identifier },
     });
@@ -21,31 +20,25 @@ export class OrdersService {
     return user;
   }
 
-  private async generateOrderNumber(): Promise<string> {
+  private async generateOrderNumber(tx: Prisma.TransactionClient): Promise<string> {
     let orderNumber = '';
     let exists = true;
     while (exists) {
       orderNumber = `KL-${Math.floor(1000 + Math.random() * 9000)}`;
-      const existing = await this.prisma.order.findUnique({ where: { orderNumber } });
+      const existing = await tx.order.findUnique({ where: { orderNumber } });
       exists = !!existing;
     }
     return orderNumber;
   }
 
   private normalizeZone(zone: string): Zone {
-      const normalized = String(zone || '').trim().toUpperCase();
-      return normalized === 'KILAMBA' ? Zone.KILAMBA : Zone.KK5000;
-    }
+    const normalized = String(zone || '').trim().toUpperCase();
+    return normalized === 'KILAMBA' ? Zone.KILAMBA : Zone.KK5000;
+  }
 
   private normalizePaymentMethod(method: string): PaymentMethod {
-      const m = String(method || 'CASH').toUpperCase();
-      return m === 'APPYPAY' ? PaymentMethod.APPYPAY : PaymentMethod.CASH;
-    }
-
-  private async addTracking(orderId: string, status: string, description: string) {
-    return this.prisma.trackingHistory.create({
-      data: { orderId, status, description },
-    });
+    const m = String(method || 'CASH').toUpperCase();
+    return m === 'APPYPAY' ? PaymentMethod.APPYPAY : PaymentMethod.CASH;
   }
 
   async create(createOrderDto: any, identifier?: string) {
@@ -58,30 +51,15 @@ export class OrdersService {
       throw new NotFoundException('Utilizador não encontrado');
     }
 
-    // Idempotency check: if externalMessageId provided, see if we already processed it
     const externalMessageId = createOrderDto?.externalMessageId;
-    if (externalMessageId) {
-      const existing = await this.prisma.processedMessage.findUnique({
-        where: { externalMessageId },
-      });
-      if (existing) {
-        // Assuming order already created; we could fetch order by some means.
-        // For simplicity, we will throw conflict? But spec says return original order.
-        // We'll need to store orderId in ProcessedMessage; not done yet.
-        // For now, we will still create new order but could duplicate.
-        // We'll rely on unique constraint on Order.externalMessageId to prevent duplicate.
-        // So we just continue; the unique constraint will cause error if duplicate.
-        // We'll handle duplicate key error below.
-      }
-    }
 
-    // Get cart with items
+    // Get cart with items (before transaction for early validation)
     const cart = await this.cartService.getCartWithItems(user.id);
     if (!cart || !cart.items || cart.items.length === 0) {
       throw new BadRequestException('Carrinho vazio ou não encontrado');
     }
 
-    // Validate each cart item: product exists, active, sufficient stock (will be checked in transaction)
+    // Validate products exist (before transaction for early validation)
     const productIds = cart.items.map(item => item.productId);
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds } },
@@ -91,39 +69,67 @@ export class OrdersService {
     }
     const productMap = new Map(products.map(p => [p.id, p]));
 
-    // Prepare order items data and compute totals inside transaction to ensure atomicity
-    const orderNumber = await this.generateOrderNumber();
+    // Pre-validate product status before transaction
+    for (const cartItem of cart.items) {
+      const product = productMap.get(cartItem.productId);
+      if (!product) {
+        throw new NotFoundException(`Produto não encontrado: ${cartItem.productId}`);
+      }
+      if (product.status !== 'active') {
+        throw new BadRequestException(`Produto inativo: ${product.name}`);
+      }
+    }
+
     const zone = this.normalizeZone(createOrderDto.deliveryZone || 'KK5000');
     const deliveryReference = createOrderDto.deliveryReference || 'N/A';
     const paymentMethod = this.normalizePaymentMethod(createOrderDto.paymentMethod);
-    let subtotal = 0;
-    const itemsData: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
 
-    // We'll perform everything in a transaction
+    // Everything that must be atomic runs inside a single transaction
     const order = await this.prisma.$transaction(async (tx) => {
-      // For each cart item, validate and decrement stock atomically
-      for (const cartItem of cart.items) {
-        const product = productMap.get(cartItem.productId);
-        if (!product) {
-          throw new NotFoundException(`Produto não encontrado: ${cartItem.productId}`);
-        }
-        if (product.status !== 'active') {
-          throw new BadRequestException(`Produto inativo: ${product.name}`);
-        }
-        // Conditional stock update: ensure stock >= quantity
-        const updated = await tx.product.update({
-          where: {
-            id: cartItem.productId,
-            stock: { gte: cartItem.quantity },
-          },
-          data: {
-            stock: { decrement: cartItem.quantity },
-          },
+      // 1. IDEMPOTENCY: if externalMessageId is provided, check for existing order
+      if (externalMessageId) {
+        const existingOrder = await tx.order.findUnique({
+          where: { externalMessageId },
+          include: { items: { include: { product: true } } },
         });
-        // If update affected 0 rows, stock insufficient
-        if (!updated) {
-          throw new BadRequestException(`Stock insuficiente para produto: ${product.name}`);
+        if (existingOrder) {
+          this.logger.warn(
+            `Idempotent create_order: externalMessageId=${externalMessageId} → returning existing order ${existingOrder.orderNumber}`,
+          );
+          return existingOrder;
         }
+      }
+
+      // 2. Generate order number (inside tx to avoid collision)
+      const orderNumber = await this.generateOrderNumber(tx);
+
+      // 3. Decrement stock conditionally for each item
+      let subtotal = 0;
+      const itemsData: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
+
+      for (const cartItem of cart.items) {
+        const product = productMap.get(cartItem.productId)!;
+
+        // Conditional stock decrement: only if stock >= quantity
+        try {
+          await tx.product.update({
+            where: {
+              id: cartItem.productId,
+              stock: { gte: cartItem.quantity },
+            },
+            data: {
+              stock: { decrement: cartItem.quantity },
+            },
+          });
+        } catch (err: any) {
+          if (err?.code === 'P2025') {
+            throw new BadRequestException(
+              `Stock insuficiente para produto: ${product.name} (disponível: ${product.stock}, pedido: ${cartItem.quantity})`,
+            );
+          }
+          throw err;
+        }
+
         const price = product.discountPrice || product.price;
         subtotal += Number(price) * cartItem.quantity;
         itemsData.push({
@@ -136,7 +142,7 @@ export class OrdersService {
       const deliveryFee = subtotal >= 10000 ? 0 : 500;
       const totalAmount = subtotal + deliveryFee;
 
-      // Create order
+      // 4. Create order with items
       const orderData: any = {
         orderNumber,
         userId: user.id,
@@ -161,23 +167,27 @@ export class OrdersService {
         include: { items: { include: { product: true } } },
       });
 
-      // Clear cart (outside of order creation but still in same transaction)
+      // 5. Clear cart items and reset totals (still inside transaction)
       await tx.cartItem.deleteMany({
         where: { cartId: cart.id },
       });
 
-      // Recalculate cart totals (optional, but cart will be empty)
-      // We could update cart totals to zero, but since we deleted items, we can set zeros.
       await tx.cart.update({
         where: { id: cart.id },
         data: { subtotal: 0, deliveryFee: 0, total: 0 },
       });
 
+      // 6. Create initial tracking entry (inside transaction for atomicity)
+      await tx.trackingHistory.create({
+        data: {
+          orderId: created.id,
+          status: 'PENDING',
+          description: 'Pedido criado com sucesso',
+        },
+      });
+
       return created;
     });
-
-    // After transaction, add tracking
-    await this.addTracking(order.id, 'PENDING', 'Pedido criado com sucesso');
 
     return {
       success: true,
@@ -229,9 +239,17 @@ export class OrdersService {
         });
       }
       await tx.order.update({ where: { id }, data: { status: 'CANCELLED' } });
+
+      // Tracking inside transaction for atomicity
+      await tx.trackingHistory.create({
+        data: {
+          orderId: id,
+          status: 'CANCELLED',
+          description: 'Pedido cancelado pelo utilizador',
+        },
+      });
     });
 
-    await this.addTracking(id, 'CANCELLED', 'Pedido cancelado pelo utilizador');
     return { success: true };
   }
 
