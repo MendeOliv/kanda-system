@@ -27,7 +27,7 @@ import { AppService } from './app.service';
       ThrottlerModule.forRoot([
         {
           ttl: 60_000, // 1 minuto
-          limit: 10,   // 10 requests globais por IP
+          limit: 100,   // 10 requests globais por IP
         },
       ]),
       FirebaseModule.forRoot(),
