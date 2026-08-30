@@ -76,7 +76,7 @@ export class CartService {
     });
   }
 
-  private async getCartWithItems(userId: string) {
+  public async getCartWithItems(userId: string) {
     const cart = await this.getOrCreateCart(userId);
     return this.prisma.cart.findUnique({
       where: { id: cart.id },

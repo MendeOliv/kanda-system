@@ -54,6 +54,10 @@ export class WhatsAppController {
       const conversation = await this.conversationService.getOrCreateConversation(from);
       this.logger.log(`Conversation ID: ${conversation.id}`);
 
+      // Load recent conversation history (last 10 messages, most recent first) BEFORE saving the current message
+      const recentMessages = await this.conversationService.getRecentMessages(conversation.id, 10);
+      this.logger.log(`Retrieved ${recentMessages.length} recent messages for context`);
+
       // Persist the user message
       const userMessage = await this.conversationService.addMessage(conversation.id, {
         externalMessageId,
@@ -64,11 +68,7 @@ export class WhatsAppController {
       });
       this.logger.log(`User message saved with ID: ${userMessage.id}`);
 
-      // Load recent conversation history (last 10 messages, most recent first)
-      const recentMessages = await this.conversationService.getRecentMessages(conversation.id, 10);
-      this.logger.log(`Retrieved ${recentMessages.length} recent messages for context`);
-
-      // Generate AI response using the history
+      // Generate AI response using the history (without the current message) and the current body
       let responseText = '';
       try {
         responseText = await this.aiService.generateResponseWithHistory(body, recentMessages);

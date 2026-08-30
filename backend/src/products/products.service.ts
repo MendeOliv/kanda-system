@@ -9,17 +9,17 @@ export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
   private toNumber(product: any) {
-    return product
-      ? {
-          ...product,
-          price: Number(product.price),
-          discountPrice: product.discountPrice != null ? Number(product.discountPrice) : null,
-        }
-      : product;
+      return product
+        ? {
+            ...product,
+            // Keep price and discountPrice as they are (Prisma.Decimal or string) to avoid precision loss
+            price: product.price,
+            discountPrice: product.discountPrice,
+          }
+        : product;
   }
 
   // ─── CRUD ──────────────────────────────────────
-
   async create(createProductDto: CreateProductDto) {
     const category = await this.prisma.category.findUnique({
       where: { id: createProductDto.categoryId },
@@ -134,24 +134,30 @@ export class ProductsService {
   }
 
   async search(query: string) {
-      if (!query || query.trim().length === 0) return [];
-
-      const q = query.trim();
-      const products = await this.prisma.product.findMany({
-        where: {
-          status: 'active',
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            { sku: { startsWith: q, mode: 'insensitive' } },
-            { description: { contains: q, mode: 'insensitive' } },
-          ],
-        },
-        take: 10,
-        include: { category: true },
-      });
-
-      return products.map((c) => this.toNumber(c));
+    console.log('SEARCH METHOD CALLED WITH QUERY:', JSON.stringify(query));
+    if (!query || query.trim().length === 0) {
+      console.log('QUERY IS EMPTY AFTER TRIM');
+      return [];
     }
+
+    const q = query.trim();
+    console.log('TRIMMED QUERY:', JSON.stringify(q));
+    const products = await this.prisma.product.findMany({
+            where: {
+              status: 'active',
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                { sku: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+                { category: { name: { contains: q, mode: 'insensitive' } } },
+              ],
+            },
+            take: 10,
+            include: { category: true },
+          });
+    console.log('RAW QUERY RESULTS COUNT:', products.length);
+    return products.map((c) => this.toNumber(c));
+  }
 
   async update(id: string, updateProductDto: UpdateProductDto | any) {
     const product = await this.prisma.product.findUnique({ where: { id } });
@@ -185,6 +191,7 @@ export class ProductsService {
       where: { id },
       data: { status: 'inactive' },
     });
+
     return this.toNumber(updated);
   }
 

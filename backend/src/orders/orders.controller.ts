@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@ne
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { CreateOrderDto } from './dto/create-order.dto';
 
 @ApiTags('Orders')
 @ApiBearerAuth()
@@ -12,8 +13,9 @@ export class OrdersController {
 
   @Post()
   @ApiOperation({ summary: 'Criar pedido' })
-  async create(@Request() req, @Body() body: any) {
-    return this.ordersService.create(req.user.userId, body);
+  async create(@Request() req, @Body() createOrderDto: CreateOrderDto) {
+    // The user id is taken from the request (set by JwtAuthGuard)
+    return this.ordersService.create(createOrderDto, req.user.userId);
   }
 
   @Get()

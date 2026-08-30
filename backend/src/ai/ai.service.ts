@@ -114,7 +114,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
       });
       const response = await result.response;
       this.logger.log(`Raw response from Gemini: ${JSON.stringify(response)}`);
-      
+
       // Extract function calls from the response candidates
       const functionCalls: any[] = [];
       if (response.candidates?.length > 0) {
@@ -126,7 +126,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
         }
       }
       this.logger.log(`Found ${functionCalls.length} function calls in response`);
-      
+
       // Check if the model wants to call a function
       if (functionCalls.length > 0) {
         this.logger.log('Entering function call branch');
@@ -155,12 +155,12 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
               parts: [call],
             });
             contents.push({
-              role: 'function' as const,
+              role: 'model' as const,
               parts: [
                 {
                   functionResponse: {
                     name: 'search_catalog',
-                    response: formattedResults,
+                    response: { results: formattedResults },
                   },
                 },
               ],

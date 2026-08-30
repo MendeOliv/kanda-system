@@ -5,7 +5,6 @@ import { Prisma } from '@prisma/client';
 @Injectable()
 export class ConversationService {
   private readonly logger = new Logger(ConversationService.name);
-  private readonly locks = new Map<string, Promise<any>>();
 
   constructor(private prisma: PrismaService) {}
 
@@ -44,9 +43,9 @@ export class ConversationService {
         ...data,
         conversation: {
           connect: {
-            id: conversationId
-          }
-        }
+            id: conversationId,
+          },
+        },
       },
     });
   }
@@ -69,7 +68,7 @@ export class ConversationService {
 
   /**
    * Process a message with concurrency control for a specific conversation.
-   * Ensures that messages for the same conversation are processed sequentially.
+   * Ensures that messages for the same conversation are processed sequentially using a database-based lock.
    * @param conversationId The conversation ID
    * @param operation The async operation to perform
    */
@@ -77,27 +76,65 @@ export class ConversationService {
     conversationId: string,
     operation: () => Promise<T>,
   ): Promise<T> {
-    // Get the existing lock for this conversation, or create a new one
-    let lock = this.locks.get(conversationId);
-    if (!lock) {
-      lock = Promise.resolve();
-      this.locks.set(conversationId, lock);
+    const lockDuration = 15000; // 15 seconds lock duration
+    const acquisitionTimeout = 20000; // 20 seconds to acquire lock
+    const retryInterval = 100; // 100 ms between retries
+
+    const startTime = Date.now();
+    let lastError;
+
+    while (Date.now() - startTime < acquisitionTimeout) {
+      try {
+        // Try to create the lock
+        await this.prisma.conversationLock.create({
+          data: {
+            conversationId,
+            expiresAt: new Date(Date.now() + lockDuration),
+          },
+        });
+
+        // Lock acquired, now run the operation and then release the lock
+        try {
+          return await operation();
+        } finally {
+          // Release the lock by deleting it
+          await this.prisma.conversationLock.deleteMany({
+            where: {
+              conversationId,
+            },
+          });
+        }
+      } catch (error) {
+        // Handle unique constraint violation (lock already exists)
+        if (error.code === 'P2002') {
+          // Check if the existing lock is expired
+          const existingLock = await this.prisma.conversationLock.findUnique({
+            where: { conversationId },
+          });
+
+          if (existingLock && existingLock.expiresAt < new Date()) {
+            // Expired lock, delete it and retry
+            await this.prisma.conversationLock.delete({
+              where: { id: existingLock.id },
+            });
+            // Continue to try creating the lock again
+            continue;
+          }
+
+          // Lock exists and is not expired, wait and retry
+          await new Promise(resolve => setTimeout(resolve, retryInterval));
+          continue;
+        }
+
+        // For other errors (e.g., expired lock due to concurrent deletion), throw immediately
+        throw error;
+      }
     }
 
-    // Chain the new operation after the current lock
-    const newLock = lock.then(async () => {
-      try {
-        return await operation();
-      } finally {
-        // Remove the lock when done
-        this.locks.delete(conversationId);
-      }
-    });
-
-    // Update the lock for this conversation
-    this.locks.set(conversationId, newLock);
-
-    return newLock;
+    // If we exited the loop, we timed out
+    throw new Error(
+      `Could not acquire lock for conversation ${conversationId} after ${acquisitionTimeout}ms`,
+    );
   }
 
   /**
