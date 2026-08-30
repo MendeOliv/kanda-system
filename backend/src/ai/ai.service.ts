@@ -18,7 +18,7 @@ export class AIService {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
-      const modelName = this.configService.get<string>('GEMINI_MODEL') || 'gemini-2.0-flash';
+      const modelName = this.configService.get<string>('GEMINI_MODEL') || 'gemini-3.6-flash';
       const systemPrompt = `Você é um assistente da Kanda. Responda em português de forma objetiva e útil.
 Você tem acesso a uma ferramenta de busca no catálogo de produtos. Quando o usuário perguntar sobre produtos, preços, estoque ou disponibilidade, você deve usar a ferramenta search_catalog para obter informações reais do banco de dados. Não invente informações.
 Se o usuário perguntar sobre algo que não seja produto, você pode responder diretamente, mas se for sobre produtos, use a ferramenta.
