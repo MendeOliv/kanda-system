@@ -61,7 +61,8 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
     const contents: any[] = [];
     // History (most recent first in the array, but we want oldest first for chronological order)
     if (conversationHistory && conversationHistory.length > 0) {
-      const sortedHistory = [...conversationHistory].reverse();
+      // Keep the original order - assume it's already chronological (oldest first)
+      const sortedHistory = [...conversationHistory];
       for (const msg of sortedHistory) {
         let role: 'user' | 'model' = 'user';
         if (msg.role === 'USER') {
@@ -103,8 +104,10 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
         `Iniciando processamento IA para mensagem: ${message.substring(0, 50)}...`,
       );
       this.logger.log(`Contents sent to model (initial): ${JSON.stringify(contents)}`);
+      // Make a copy of contents for the first call to avoid mutation issues
+      const contentsForFirstCall = JSON.parse(JSON.stringify(contents));
       const result = await this.model.generateContent({
-        contents,
+        contents: contentsForFirstCall,
         tools: [
           {
             functionDeclarations: [searchCatalogFunction],
@@ -146,17 +149,25 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
               id: product.id,
               name: product.name,
               description: product.description,
-              category: product.category?.name,
+              category: product.category ?? null,
               price: product.price,
               discountPrice: product.discountPrice,
               stock: product.stock,
               sku: product.sku,
             }));
             this.logger.log(`Formatted results for Gemini: ${JSON.stringify(formattedResults)}`);
-            // Append the function call and result to the contents
+            // Log the function call received
+            this.logger.log(`[AIService] Function call received:`);
+            this.logger.log(`name=${call.name}`);
+            this.logger.log(`args=${JSON.stringify(call.args)}`);
+            this.logger.log(`id=${call.id}`);
+            // Log the tool result
+            this.logger.log(`[AIService] Tool result:`);
+            this.logger.log(`search_catalog -> ${searchResults.length} results`);
+            // Append the function call and result to the contents for the final generation
             contents.push({
               role: 'model' as const,
-              parts: [call],
+              parts: [{ functionCall: call }],
             });
             contents.push({
               role: 'user' as const,
@@ -170,7 +181,20 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
               ],
             });
             // Log the contents we are sending to the model for the final response
-            this.logger.log(`Contents for final generation: ${JSON.stringify(contents)}`);
+            this.logger.log(`[AIService] Final Gemini contents:`);
+            // We'll log a simplified version for readability
+            const logContents = contents.map((c, index) => {
+              if (c.role === 'user' && c.parts[0].text) {
+                return `USER -> ${c.parts[0].text.substring(0, 50)}`;
+              } else if (c.role === 'model' && c.parts[0].functionCall) {
+                return `MODEL -> functionCall(${c.parts[0].functionCall.name})`;
+              } else if (c.role === 'user' && c.parts[0].functionResponse) {
+                return `USER -> functionResponse(${c.parts[0].functionResponse.name})`;
+              } else {
+                return `${c.role} -> ${JSON.stringify(c.parts[0])}`;
+              }
+            });
+            this.logger.log(logContents.join('\n'));
             // Break after first function call (we only support one for now)
             break;
           }
@@ -186,9 +210,9 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
           },
         });
         const finalResponse = await finalResult.response;
-        this.logger.log(`Final response object: ${JSON.stringify(finalResponse)}`);
+        this.logger.log(`[AIService] Final Gemini response:`);
         const finalText = finalResponse.text();
-        this.logger.log(`Final response text: ${finalText}`);
+        this.logger.log(finalText);
         if (!finalText || finalText.trim() === '') {
           this.logger.warn('Gemini retornou resposta vazia após function call');
           return 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.';
