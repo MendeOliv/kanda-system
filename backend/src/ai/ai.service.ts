@@ -162,7 +162,9 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
             const searchResults = await this.productsService.search(query);
             this.logger.log(`Search results from ProductsService: ${JSON.stringify(searchResults)}`);
             // Format the results for the model (only necessary fields)
-            const formattedResults = searchResults.map((product: any) => ({
+            // Handle case where searchResults might be null or undefined
+            const resultsArray = Array.isArray(searchResults) ? searchResults : [];
+            const formattedResults = resultsArray.map((product: any) => ({
               id: product.id,
               name: product.name,
               description: product.description,
@@ -181,7 +183,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
             this.logger.log(`thoughtSignature=${callPart.thoughtSignature ? 'present' : 'absent'}`);
             // Log the tool result
             this.logger.log(`[AIService] Tool result:`);
-            this.logger.log(`search_catalog -> ${searchResults.length} results`);
+            this.logger.log(`search_catalog -> ${searchResults?.length ?? 0} results`);
             // Append the function call and result to the contents for the final generation
             // PRESERVE THE ORIGINAL PART WITH thoughtSignature INSTEAD OF RECONSTRUCTING
             contents.push({
