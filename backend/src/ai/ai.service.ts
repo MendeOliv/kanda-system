@@ -72,7 +72,9 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
             msg.content.includes('Desculpe, ocorreu um erro ao processar sua mensagem.') ||
             msg.content.includes('Desculpe, não consegui gerar uma resposta no momento.') ||
             msg.content === 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.' ||
-            msg.content === 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.'
+            msg.content === 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.' ||
+            // Add the 429 fallback message to the filter list to prevent it from contaminating context
+            msg.content === 'Neste momento estou com muitas solicitações. Tente novamente em alguns instantes.'
           );
 
         if (!isKnownErrorResponse) {
@@ -260,8 +262,9 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
         // Handle quota/rate limit errors specifically
         const retryDelay = error?.retryDelay || error?.error?.retryDelay || 'unknown';
         this.logger.error(`[AIService] Gemini rate limit/quota exceeded (429)`);
+        this.logger.error(`[AIService] Model: ${this.configService.get<string>('GEMINI_MODEL') || 'gemini-3.6-flash'}`);
         this.logger.error(`[AIService] Retry delay: ${retryDelay}`);
-        // Return a user-friendly message for quota exceeded
+        // Return the fallback message for quota exceeded (do not throw error)
         return 'Neste momento estou com muitas solicitações. Tente novamente em alguns instantes.';
       }
       

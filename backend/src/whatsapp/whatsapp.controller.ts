@@ -15,7 +15,7 @@ export class WhatsAppController {
   constructor(
     private readonly whatsappService: WhatsAppService,
     private readonly aiService: AIService,
-    private readonly conversationService: ConversationService,
+    private readonly conversationService: ConversationService
   ) {}
 
   @Post('send')
@@ -70,22 +70,31 @@ export class WhatsAppController {
 
       // Generate AI response using the history (without the current message) and the current body
       let responseText = '';
+      let isQuotaExceeded = false;
       try {
         responseText = await this.aiService.generateResponseWithHistory(body, recentMessages);
       } catch (error) {
+        // Handle any unexpected errors
         this.logger.error(`Erro ao gerar resposta com IA: ${error.message}`, error.stack);
         responseText = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.';
       }
 
+      // Check if the response is the quota exceeded fallback message
+      isQuotaExceeded = responseText === 'Neste momento estou com muitas solicitações. Tente novamente em alguns instantes.';
+
       this.logger.log(`Resposta gerada pela IA: ${responseText.substring(0, 50)}...`);
 
-      // Persist the assistant message
-      const assistantMessage = await this.conversationService.addMessage(conversation.id, {
-        role: 'ASSISTANT',
-        content: responseText,
-        timestamp: new Date(),
-      });
-      this.logger.log(`Assistant message saved with ID: ${assistantMessage.id}`);
+      // Persist the assistant message only if it's not a quota exceeded fallback
+      if (!isQuotaExceeded) {
+        const assistantMessage = await this.conversationService.addMessage(conversation.id, {
+          role: 'ASSISTANT',
+          content: responseText,
+          timestamp: new Date(),
+        });
+        this.logger.log(`Assistant message saved with ID: ${assistantMessage.id}`);
+      } else {
+        this.logger.log(`Quota exceeded response not saved as assistant message: ${responseText}`);
+      }
 
       // Send the response back to the user via WhatsApp
       await this.whatsappService.sendMessage(from, responseText);
