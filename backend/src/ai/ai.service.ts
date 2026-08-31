@@ -124,11 +124,13 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
 
       // Extract function calls from the response candidates
       const functionCalls: any[] = [];
+      const functionCallParts: any[] = []; // Preserve the original parts with thoughtSignature
       if (response.candidates?.length > 0) {
         const parts = response.candidates[0].content.parts;
         for (const part of parts) {
           if (part.functionCall) {
             functionCalls.push(part.functionCall);
+            functionCallParts.push(part); // Preserve the entire part including thoughtSignature
           }
         }
       }
@@ -137,7 +139,9 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
       // Check if the model wants to call a function
       if (functionCalls.length > 0) {
         this.logger.log('Entering function call branch');
-        for (const call of functionCalls) {
+        for (let i = 0; i < functionCalls.length; i++) {
+          const call = functionCalls[i];
+          const callPart = functionCallParts[i]; // The preserved original part
           if (call.name === 'search_catalog') {
             const query = call.args.q as string;
             this.logger.log(`Executing search_catalog with query: ${query}`);
@@ -161,13 +165,15 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
             this.logger.log(`name=${call.name}`);
             this.logger.log(`args=${JSON.stringify(call.args)}`);
             this.logger.log(`id=${call.id}`);
+            this.logger.log(`thoughtSignature=${callPart.thoughtSignature ? 'present' : 'absent'}`);
             // Log the tool result
             this.logger.log(`[AIService] Tool result:`);
             this.logger.log(`search_catalog -> ${searchResults.length} results`);
             // Append the function call and result to the contents for the final generation
+            // PRESERVE THE ORIGINAL PART WITH thoughtSignature INSTEAD OF RECONSTRUCTING
             contents.push({
               role: 'model' as const,
-              parts: [{ functionCall: call }],
+              parts: [callPart], // Use the preserved original part
             });
             contents.push({
               role: 'user' as const,
@@ -187,7 +193,8 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
               if (c.role === 'user' && c.parts[0].text) {
                 return `USER -> ${c.parts[0].text.substring(0, 50)}`;
               } else if (c.role === 'model' && c.parts[0].functionCall) {
-                return `MODEL -> functionCall(${c.parts[0].functionCall.name})`;
+                const hasThoughtSignature = !!c.parts[0].thoughtSignature;
+                return `MODEL -> functionCall(${c.parts[0].functionCall.name})${hasThoughtSignature ? ' +thoughtSignature' : ''}`;
               } else if (c.role === 'user' && c.parts[0].functionResponse) {
                 return `USER -> functionResponse(${c.parts[0].functionResponse.name})`;
               } else {
