@@ -55,6 +55,7 @@ describe('WhatsAppController (status@broadcast)', () => {
       body: 'https://status.whatsapp.com/...',
       externalMessageId: 'test-external-id',
       timestamp: Date.now(),
+      type: 'chat', // Adding required type field
     });
 
     expect(result).toEqual({ status: 'Message received (status ignored)' });
@@ -71,6 +72,7 @@ describe('WhatsAppController (status@broadcast)', () => {
       body: 'Hello',
       externalMessageId: 'test-external-id',
       timestamp: Date.now(),
+      type: 'chat', // Adding required type field
     });
 
     expect(result).toEqual({ status: 'Message received' });
