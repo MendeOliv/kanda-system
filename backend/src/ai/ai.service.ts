@@ -64,17 +64,30 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
       // Keep the original order - assume it's already chronological (oldest first)
       const sortedHistory = [...conversationHistory];
       for (const msg of sortedHistory) {
-        let role: 'user' | 'model' = 'user';
-        if (msg.role === 'USER') {
-          role = 'user';
-        } else if (msg.role === 'ASSISTANT') {
-          role = 'model';
+        // FILTER OUT KNOWN AI ERROR MESSAGES TO PREVENT CONTAMINATION OF CONTEXT
+        // These are artificial error responses that should not be treated as legitimate conversation
+        const isKnownErrorResponse = 
+          msg.role === 'ASSISTANT' && 
+          msg.content && (
+            msg.content.includes('Desculpe, ocorreu um erro ao processar sua mensagem.') ||
+            msg.content.includes('Desculpe, não consegui gerar uma resposta no momento.') ||
+            msg.content === 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.' ||
+            msg.content === 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.'
+          );
+
+        if (!isKnownErrorResponse) {
+          let role: 'user' | 'model' = 'user';
+          if (msg.role === 'USER') {
+            role = 'user';
+          } else if (msg.role === 'ASSISTANT') {
+            role = 'model';
+          }
+          // Note: We don't expect SYSTEM messages in the conversation history
+          contents.push({
+            role: role,
+            parts: [{ text: msg.content ?? '' }],
+          });
         }
-        // Note: We don't expect SYSTEM messages in the conversation history
-        contents.push({
-          role: role,
-          parts: [{ text: msg.content ?? '' }],
-        });
       }
     }
     // Current user message
@@ -240,6 +253,16 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
       );
       return text.trim();
     } catch (error) {
+      // Handle specific Gemini API errors
+      if (error?.status === 429 || error?.error?.status === 429) {
+        // Handle quota/rate limit errors specifically
+        const retryDelay = error?.retryDelay || error?.error?.retryDelay || 'unknown';
+        this.logger.error(`[AIService] Gemini rate limit/quota exceeded (429)`);
+        this.logger.error(`[AIService] Retry delay: ${retryDelay}`);
+        // Return a user-friendly message for quota exceeded
+        return 'Neste momento estou com muitas solicitações. Tente novamente em alguns instantes.';
+      }
+      
       this.logger.error(`Erro ao processar com Gemini: ${error instanceof Error ? error.stack : JSON.stringify(error)}`);
       // Depending on the error, we can return a friendly message or rethrow
       // For now, we'll return a generic error message to not break the flow

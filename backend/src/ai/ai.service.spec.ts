@@ -88,7 +88,7 @@ describe('AIService', () => {
 
     const result = await noKeyService.generateResponse('Hello');
     expect(result).toBe('Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.');
-    
+
     await noKeyModule.close();
   });
 
@@ -142,6 +142,7 @@ describe('AIService', () => {
                       args: { q: 'Coca cola' },
                       id: 'call_123',
                     },
+                    thoughtSignature: 'EpcCCpQCARFNMg/...',
                   },
                 ],
               },
@@ -193,6 +194,7 @@ describe('AIService', () => {
               args: { q: 'Coca cola' },
               id: 'call_123',
             },
+            thoughtSignature: 'EpcCCpQCARFNMg/...',
           },
         ],
       });
@@ -227,6 +229,7 @@ describe('AIService', () => {
                       args: { q: 'Pepsi' },
                       id: 'call_456',
                     },
+                    thoughtSignature: 'EpcCCpQCARFNMg/...',
                   },
                 ],
               },
@@ -268,6 +271,7 @@ describe('AIService', () => {
               args: { q: 'Pepsi' },
               id: 'call_456',
             },
+            thoughtSignature: 'EpcCCpQCARFNMg/...',
           },
         ],
       });
@@ -299,6 +303,7 @@ describe('AIService', () => {
                       args: { q: 'Test' },
                       id: 'call_789',
                     },
+                    thoughtSignature: 'EpcCCpQCARFNMg/...',
                   },
                 ],
               },
@@ -332,6 +337,9 @@ describe('AIService', () => {
       expect(modelPart).not.toHaveProperty('name');
       expect(modelPart).not.toHaveProperty('args');
       expect(modelPart).not.toHaveProperty('id');
+      // Ensure thoughtSignature is preserved
+      expect(modelPart).toHaveProperty('thoughtSignature');
+      expect(modelPart.thoughtSignature).toBe('EpcCCpQCARFNMg/...');
     });
 
     it('should not duplicate user message in history', async () => {
@@ -347,6 +355,7 @@ describe('AIService', () => {
                       args: { q: 'Dupe test' },
                       id: 'call_dup',
                     },
+                    thoughtSignature: 'EpcCCpQCARFNMg/...',
                   },
                 ],
               },
@@ -401,6 +410,7 @@ describe('AIService', () => {
               args: { q: 'Dupe test' },
               id: 'call_dup',
             },
+            thoughtSignature: 'EpcCCpQCARFNMg/...',
           },
         ],
       });
@@ -441,4 +451,111 @@ describe('AIService', () => {
     const result = await service.generateResponse('Hello');
     expect(result).toBe('Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.');
   });
+
+  // NEW TESTS FOR AI-02.3
+
+  it('should handle Gemini 429 quota exceeded error', async () => {
+    const mockError = new Error('Quota exceeded');
+    mockError.status = 429;
+    mockError.retryDelay = '46.375130808s';
+    
+    mockGenerateContent.mockRejectedValueOnce(mockError);
+
+    const result = await service.generateResponseWithHistory('Tem coca cola?', []);
+
+    expect(result).toBe('Neste momento estou com muitas solicitações. Tente novamente em alguns instantes.');
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1); // Only one call, no retry
+    
+    // Verify that error was logged appropriately (we can't test logger directly easily,
+    // but we can verify the service didn't crash and returned the expected message)
+  });
+
+  it('should not include AI error messages in conversation history', async () => {
+    // First call: returns functionCall
+    mockGenerateContent.mockResolvedValueOnce({
+      response: {
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  functionCall: {
+                    name: 'search_catalog',
+                    args: { q: 'Test' },
+                    id: 'call_123',
+                  },
+                  thoughtSignature: 'EpcCCpQCARFNMg/...',
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    // Second call: returns final text response
+    mockGenerateContent.mockResolvedValueOnce({
+      response: {
+        text: () => 'Resposta final',
+        candidates: [{ content: { parts: [] } }],
+      },
+    });
+
+    productsService.search.mockResolvedValueOnce([{ id: 1, name: 'Test Product' }]);
+
+    // Provide history containing known AI error messages
+    const history = [
+      { role: 'USER', content: 'Olá' },
+      { role: 'ASSISTANT', content: 'Desculpe, ocorreu um erro ao processar sua mensagem.' },
+      { role: 'ASSISTANT', content: 'Desculpe, não consegui gerar uma resposta no momento.' },
+      { role: 'USER', content: 'Como vai?' },
+      { role: 'ASSISTANT', content: 'Estou bem, e você?' }, // This should be included
+    ];
+
+    await service.generateResponseWithHistory('Tem coca cola?', history);
+
+    // Verify that the second call contents ONLY includes:
+    // - Valid history messages (Olá, Como vai?, Estou bem, e você?)
+    // - Current user message (Tem coca cola?)
+    // - Function call
+    // - Function response
+    // 
+    // AND does NOT include the error messages
+    const secondCall = mockGenerateContent.mock.calls[1][0];
+    
+    // Count total contents
+    expect(secondCall.contents.length).toBeGreaterThanOrEqual(4);
+    
+    // Check that error messages are NOT present
+    const errorMessage1 = 'Desculpe, ocorreu um erro ao processar sua mensagem.';
+    const errorMessage2 = 'Desculpe, não consegui gerar uma resposta no momento.';
+    
+    const hasErrorMessage1 = secondCall.contents.some(
+      content => content.role === 'model' && 
+                content.parts[0]?.text === errorMessage1
+    );
+    
+    const hasErrorMessage2 = secondCall.contents.some(
+      content => content.role === 'model' && 
+                content.parts[0]?.text === errorMessage2
+    );
+    
+    expect(hasErrorMessage1).toBe(false);
+    expect(hasErrorMessage2).toBe(false);
+    
+    // Check that valid messages ARE present
+    const hasValidUserMessage = secondCall.contents.some(
+      content => content.role === 'user' && 
+                content.parts[0]?.text === 'Olá'
+    );
+    
+    const hasValidAssistantMessage = secondCall.contents.some(
+      content => content.role === 'model' && 
+                content.parts[0]?.text === 'Estou bem, e você?'
+    );
+    
+    expect(hasValidUserMessage).toBe(true);
+    expect(hasValidAssistantMessage).toBe(true);
+  });
+
 });
