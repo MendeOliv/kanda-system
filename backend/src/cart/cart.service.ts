@@ -130,8 +130,10 @@ export class CartService {
 
     // Perform atomic operations inside transaction
     const updatedCart = await this.prisma.$transaction(async (tx) => {
+      // Cast: Omit<PrismaClient, ITXClientDenyList> drops getter-based model delegates
+      const t = tx as unknown as PrismaService;
       // Upsert cart item
-      await tx.cartItem.upsert({
+      await t.cartItem.upsert({
         where: { cartId_productId: { cartId: cart.id, productId } },
         update: { quantity: { increment: quantity }, price },
         create: { cartId: cart.id, productId, quantity, price },
@@ -139,7 +141,7 @@ export class CartService {
 
       // Record processed message for idempotency (only if externalMessageId is provided)
       if (externalMessageId) {
-        await tx.processedMessage.create({
+        await t.processedMessage.create({
           data: { externalMessageId, userId },
         });
       }
@@ -173,14 +175,15 @@ export class CartService {
 
     // Perform atomic operations inside transaction
     const updatedCart = await this.prisma.$transaction(async (tx) => {
+      const t = tx as unknown as PrismaService;
       if (quantity <= 0) {
-        await tx.cartItem.delete({
+        await t.cartItem.delete({
           where: { cartId_productId: { cartId: cart.id, productId } },
         }).catch(() => {
           // Item não existia — ignorar
         });
       } else {
-        await tx.cartItem.update({
+        await t.cartItem.update({
           where: { cartId_productId: { cartId: cart.id, productId } },
           data: { quantity },
         });
@@ -188,7 +191,7 @@ export class CartService {
 
       // Record processed message for idempotency (only if externalMessageId is provided)
       if (externalMessageId) {
-        await tx.processedMessage.create({
+        await t.processedMessage.create({
           data: { externalMessageId, userId },
         });
       }
@@ -221,7 +224,8 @@ export class CartService {
 
     // Perform atomic operations inside transaction
     const updatedCart = await this.prisma.$transaction(async (tx) => {
-      await tx.cartItem.delete({
+      const t = tx as unknown as PrismaService;
+      await t.cartItem.delete({
         where: { cartId_productId: { cartId: cart.id, productId } },
       }).catch(() => {
         // Item não existia — ignorar
@@ -229,7 +233,7 @@ export class CartService {
 
       // Record processed message for idempotency (only if externalMessageId is provided)
       if (externalMessageId) {
-        await tx.processedMessage.create({
+        await t.processedMessage.create({
           data: { externalMessageId, userId },
         });
       }
@@ -261,11 +265,12 @@ export class CartService {
 
     // Perform atomic operations inside transaction
     const updatedCart = await this.prisma.$transaction(async (tx) => {
-      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+      const t = tx as unknown as PrismaService;
+      await t.cartItem.deleteMany({ where: { cartId: cart.id } });
 
       // Record processed message for idempotency (only if externalMessageId is provided)
       if (externalMessageId) {
-        await tx.processedMessage.create({
+        await t.processedMessage.create({
           data: { externalMessageId, userId },
         });
       }

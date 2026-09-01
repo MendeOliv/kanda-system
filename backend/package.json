@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "postinstall": "node scripts/fix-prisma-default-types.js",
     "prebuild": "rimraf dist",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -22,7 +23,7 @@
     "migrate": "prisma db push",
     "migrate:dev": "prisma migrate dev",
     "migrate:prod": "prisma migrate deploy",
-    "prisma:generate": "prisma generate",
+    "prisma:generate": "prisma generate && node scripts/fix-prisma-default-types.js",
     "prisma:studio": "prisma studio",
     "seed": "ts-node ./scripts/seed-catalog.ts"
   },
