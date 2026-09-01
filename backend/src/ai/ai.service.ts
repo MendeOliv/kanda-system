@@ -58,14 +58,14 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
     ];
 
     const contents: any[] = [];
-    
+
     if (conversationHistory && conversationHistory.length > 0) {
       // Filter out error fallback messages
       const filteredHistory = conversationHistory.filter(msg => {
         if (!msg.content) return true;
         return !errorFallbacks.some(fallback => msg.content.includes(fallback));
       });
-      
+
       let sortedHistory = [...filteredHistory];
       if (sortedHistory[0]?.timestamp && sortedHistory[sortedHistory.length - 1]?.timestamp) {
         sortedHistory.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -108,7 +108,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
     try {
       const initialContents = JSON.parse(JSON.stringify(contents));
       this.logger.log(`Contents sent to model (initial): ${JSON.stringify(initialContents)}`);
-      
+
       const result = await this.model.generateContent({
         contents: initialContents,
         tools: [{ functionDeclarations: [searchCatalogFunction] }],
@@ -124,7 +124,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
 
       if (functionCalls.length > 0) {
         this.logger.log(`Found ${functionCalls.length} function calls`);
-        
+
         const modelContent = { role: 'model', ...candidate.content };
         contents.push(modelContent);
 
@@ -134,7 +134,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
             const query = call.args.q;
             this.logger.log(`Executing search_catalog: ${query}`);
             const searchResults = await this.productsService.search(query);
-            
+
             const formattedResults = searchResults.map((p: any) => ({
               id: p.id,
               name: p.name,
@@ -155,12 +155,12 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
                 },
               }],
             });
-            break; 
+            break;
           }
         }
 
         this.logger.log(`Contents for final generation: ${JSON.stringify(contents)}`);
-        
+
         const finalResult = await this.model.generateContent({
           contents,
           tools: [{ functionDeclarations: [searchCatalogFunction] }],
@@ -169,7 +169,7 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
 
         const finalResponse = await finalResult.response;
         const finalText = finalResponse.text();
-        
+
         if (!finalText || finalText.trim() === '') {
           this.logger.warn('Gemini retornou resposta vazia após function call');
           return 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.';

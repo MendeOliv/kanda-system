@@ -79,11 +79,20 @@ export class WhatsAppController {
         responseText = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.';
       }
 
-      const isQuotaExceeded = responseText === 'Neste momento estou com muitas solicitações. Tente novamente em alguns instantes.';
+      // Define the set of fallback messages that should not be persisted as assistant messages
+      const fallbackMessages = new Set([
+        'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.',
+        'Neste momento estou com muitas solicitações. Tente novamente em alguns instantes.',
+        'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.',
+        'Desculpe, ocorreu um erro ao processar sua mensagem.',
+        'Desculpe, não consegui gerar uma resposta no momento.',
+      ]);
+      const trimmedResponse = responseText.trim();
+      const isFallback = fallbackMessages.has(trimmedResponse);
       this.logger.log(`Resposta gerada pela IA: ${responseText.substring(0, 50)}...`);
 
-      // Persist assistant message ONLY if not quota fallback
-      if (!isQuotaExceeded) {
+      // Persist assistant message ONLY if not a fallback
+      if (!isFallback) {
         const assistantMessage = await this.conversationService.addMessage(conversation.id, {
           role: 'model',
           content: responseText,
@@ -91,7 +100,7 @@ export class WhatsAppController {
         });
         this.logger.log(`Assistant message saved with ID: ${assistantMessage.id}`);
       } else {
-        this.logger.log(`Quota exceeded response not saved as assistant message: ${responseText}`);
+        this.logger.log(`Fallback response not saved as assistant message: ${responseText}`);
       }
 
       // Send via WhatsApp

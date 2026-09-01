@@ -51,20 +51,27 @@ export class ConversationService {
   }
 
   /**
-   * Get recent messages for a conversation, limited to the last N messages
-   * @param conversationId The conversation ID
-   * @param limit The number of most recent messages to retrieve (default: 10)
-   */
-  async getRecentMessages(
-    conversationId: string,
-    limit: number = 10,
-  ) {
-    return this.prisma.conversationMessage.findMany({
-      where: { conversationId },
-      orderBy: { timestamp: 'desc' },
-      take: limit,
-    });
-  }
+     * Get recent messages for a conversation, limited to the last N messages
+     * @param conversationId The conversation ID
+     * @param limit The number of most recent messages to retrieve (default: 10)
+     */
+    async getRecentMessages(
+      conversationId: string,
+      limit: number = 10,
+    ) {
+      // Exclude very old messages (likely test artifacts) to prevent history pollution
+      const cutoff = new Date('2024-01-01');
+      return this.prisma.conversationMessage.findMany({
+        where: {
+          conversationId,
+          timestamp: {
+            gte: cutoff,
+          },
+        },
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+      });
+    }
 
   /**
    * Process a message with concurrency control for a specific conversation.
