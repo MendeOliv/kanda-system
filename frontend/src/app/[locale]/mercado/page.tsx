@@ -206,7 +206,7 @@ export default function MercadoPage() {
                       <span className="font_price_display text_price_display text_primary">0 Kz</span>
                     </div>
                     <button className="w-full h-[48px] bg_surface_variant text_secondary rounded-lg flex items-center justify_center gap_xs font_label_bold text_label_bold cursor_not_allowed" disabled>
-                      <span className="material_symbols_outlined text-[20px]">notifications</span> Avisar-me
+                      <span className="material-symbols-outlined text-[20px]">notifications</span> Avisar-me
                     </button>
                   </div>
                 </div>
@@ -339,7 +339,7 @@ export default function MercadoPage() {
                 }}
                 className="bg_primary text_on_primary font_label_bold h-12 px-xl rounded-lg flex items-center justify_center gap_xs hover:bg_surface_tint transition_colors"
               >
-                <span className="material_symbols_outlined text-[20px]">refresh</span> Tentar Novamente
+                <span className="material-symbols-outlined text-[20px]">refresh</span> Tentar Novamente
               </button>
             </div>
           </div>
@@ -347,7 +347,7 @@ export default function MercadoPage() {
           {/* Pagination */}
           <div className="mt_xl flex justify-center items-center gap_sm font_body_md text_body_md">
             <button className="p-xs text_secondary hover:bg_surface_container_low rounded flex items-center justify_center disabled:opacity-50">
-              <span className="material_symbols_outlined">chevron_left</span>
+              <span className="material-symbols-outlined">chevron_left</span>
             </button>
             {[1, 2, 3].map((n) => (
               <button
@@ -360,7 +360,7 @@ export default function MercadoPage() {
             <span className="text_outline_variant">...</span>
             <button className="w-8 h-8 flex items-center justify-center rounded-full text_secondary hover:bg_surface_container_low transition_colors">8</button>
             <button className="p-xs text_secondary hover:bg_surface_container_low rounded flex items-center justify-center">
-              <span className="material_symbols_outlined">chevron_right</span>
+              <span className="material-symbols-outlined">chevron_right</span>
             </button>
           </div>
         </section>
@@ -379,7 +379,7 @@ export default function MercadoPage() {
         </div>
         <div className="bg_surface_container_lowest rounded-lg p-md soft_shadow_level_1 border border_surface_variant">
           <div className="flex items-center gap-sm mb-md pb-xs border-b border_surface_variant">
-            <span className="material_symbols_outlined text_primary">filter_list</span>
+            <span className="material-symbols-outlined text_primary">filter_list</span>
             <h2 className="font_h3 text_h3 text_on_surface">Filtros</h2>
           </div>
 
@@ -498,7 +498,7 @@ export default function MercadoPage() {
                     <button
                       className="w-full h-[48px] bg_surface_variant text_secondary rounded-lg flex items-center justify_center gap_xs font_label_bold text_label_bold cursor_not_allowed" disabled
                     >
-                      <span className="material_symbols_outlined text-[20px]">notifications</span> Avisar-me
+                      <span className="material-symbols-outlined text-[20px]">notifications</span> Avisar-me
                     </button>
                   ) : (
                     <button
@@ -513,7 +513,7 @@ export default function MercadoPage() {
                       }
                       className="w-full h-[48px] bg_primary text_on_primary rounded-lg flex items-center justify_center gap_xs font_label_bold text_label_bold hover:bg_surface_tint active:scale-95 transition_all"
                     >
-                      <span className="material_symbols_outlined text-[20px]">add</span> Adicionar
+                      <span className="material-symbols-outlined text-[20px]">add</span> Adicionar
                     </button>
                   )}
                 </div>
@@ -525,7 +525,7 @@ export default function MercadoPage() {
         {/* Pagination */}
         <div className="mt_xl flex justify-center items-center gap_sm font_body_md text_body_md">
           <button className="p-xs text_secondary hover:bg_surface_container_low rounded flex items-center justify_center disabled:opacity-50">
-            <span className="material_symbols_outlined">chevron_left</span>
+            <span className="material-symbols-outlined">chevron_left</span>
           </button>
           {[1, 2, 3].map((n) => (
             <button
@@ -538,7 +538,7 @@ export default function MercadoPage() {
           <span className="text_outline_variant">...</span>
           <button className="w-8 h-8 flex items-center justify-center rounded-full text_secondary hover:bg_surface_container_low transition_colors">8</button>
           <button className="p-xs text_secondary hover:bg_surface_container_low rounded flex items-center justify-center">
-            <span className="material_symbols_outlined">chevron_right</span>
+            <span className="material-symbols-outlined">chevron_right</span>
           </button>
         </div>
       </section>
