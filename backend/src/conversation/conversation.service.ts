@@ -59,14 +59,12 @@ export class ConversationService {
       conversationId: string,
       limit: number = 10,
     ) {
-      // Exclude very old messages (likely test artifacts) to prevent history pollution
-      const cutoff = new Date('2024-01-01');
+      // NOTE: no timestamp cutoff here. The previous 2024 cutoff silently hid
+      // every message whose timestamp was persisted with the seconds-vs-ms bug.
+      // Role casing (USER/ASSISTANT/user/model) is normalized by consumers.
       return this.prisma.conversationMessage.findMany({
         where: {
           conversationId,
-          timestamp: {
-            gte: cutoff,
-          },
         },
         orderBy: { timestamp: 'desc' },
         take: limit,

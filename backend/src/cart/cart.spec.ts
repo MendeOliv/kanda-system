@@ -176,6 +176,21 @@ describe('CartService', () => {
         total: 0,
       });
 
+      // recalc() reads items inside the transaction and persists totals
+      prisma.cartItem.findMany.mockResolvedValue([
+        { id: 'ci1', cartId: 'cart-id', productId: 'test-product', quantity: 2, price: 100, product: { id: 'test-product', name: 'Test Product' } },
+      ]);
+      prisma.cart.update.mockResolvedValue({
+        id: 'cart-id',
+        userId: 'test-user',
+        subtotal: 200,
+        deliveryFee: 500,
+        total: 700,
+        items: [
+          { id: 'ci1', cartId: 'cart-id', productId: 'test-product', quantity: 2, price: 100, product: { id: 'test-product', name: 'Test Product' } },
+        ],
+      });
+
       const result = await service.addItem('test-user', 'test-product', 2);
       expect(result.success).toBe(true);
       expect(result.cart.items.length).toBe(1);

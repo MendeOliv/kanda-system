@@ -3,6 +3,32 @@ import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductsService } from '../products/products.service';
+import { CartService } from '../cart/cart.service';
+import { OrdersService } from '../orders/orders.service';
+
+export const AI_ERROR_FALLBACKS = [
+  'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.',
+  'Neste momento estou com muitas solicitações. Tente novamente em alguns instantes.',
+  'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.',
+  'Desculpe, ocorreu um erro ao processar sua mensagem.',
+  'Desculpe, não consegui gerar uma resposta no momento.',
+];
+
+const SYSTEM_PROMPT = `Você é o assistente de vendas da Kanda no WhatsApp. Responda sempre em português de forma curta, objetiva e útil.
+
+FERRAMENTAS:
+- search_catalog: use SEMPRE que o usuário perguntar sobre produtos, preços, estoque ou disponibilidade. Não invente produtos.
+- add_to_cart: use quando o usuário quiser adicionar um produto ao carrinho (precisa do productId de uma busca prévia no search_catalog). Confirme o item adicionado mostrando nome, quantidade e subtotal.
+- view_cart: use quando o usuário quiser ver o carrinho. Liste os itens, subtotal e total.
+- remove_from_cart: use quando o usuário quiser remover um produto ou item do carrinho.
+- clear_cart: use quando o usuário quiser esvaziar o carrinho.
+- request_order_confirmation: use quando o usuário demonstrar intenção de finalizar a compra (ex: "fechar pedido", "finalizar", "confirmar"). Esta ferramenta devolve o resumo do carrinho; apresente o resumo e pergunte se o usuário CONFIRMA o pedido. NÃO crie o pedido ainda.
+- create_order: use APENAS quando o usuário confirmar explicitamente o pedido após ver o resumo (ex: "sim, confirmo", "pode fechar"). Cria o pedido real e devolve o número do pedido. Nunca chame sem confirmação explícita.
+
+REGRAS:
+- Baseie informações de produtos exclusivamente nos resultados das ferramentas.
+- Nunca prometa pagamento ou entrega: se perguntarem, diga que o pagamento e a entrega serão combinados após a confirmação do pedido.
+- Um productId só é válido se veio de um search_catalog na conversa.`;
 
 @Injectable()
 export class AIService {
@@ -13,19 +39,17 @@ export class AIService {
   constructor(
     private configService: ConfigService,
     private prisma: PrismaService,
-    private productsService: ProductsService
+    private productsService: ProductsService,
+    private cartService: CartService,
+    private ordersService: OrdersService,
   ) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
       const modelName = this.configService.get<string>('GEMINI_MODEL') || 'gemini-3.6-flash';
-      const systemPrompt = `Você é um assistente da Kanda. Responda em português de forma objetiva e útil.
-Você tem acesso a uma ferramenta de busca no catálogo de produtos. Quando o usuário perguntar sobre produtos, preços, estoque ou disponibilidade, você deve usar a ferramenta search_catalog para obter informações reais do banco de dados. Não invente informações.
-Se o usuário perguntar sobre algo que não seja produto, você pode responder diretamente, mas se for sobre produtos, use a ferramenta.
-Após obter os resultados da busca, você deve basear sua resposta exclusivamente nesses resultados, mencionando os produtos encontrados, seus preços e disponibilidade. Se nenhum produto for encontrado, informe que não encontrou o produto.`;
       this.model = this.genAI.getGenerativeModel({
         model: modelName,
-        systemInstruction: systemPrompt,
+        systemInstruction: SYSTEM_PROMPT,
       });
       this.logger.log(`AI Service initialized with model: ${modelName}`);
     } else {
@@ -37,38 +61,273 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
     return !!this.model;
   }
 
+  /**
+   * Resolve or lazily create the WhatsApp customer as a User so that the
+   * existing CartService/OrdersService (keyed by user.id) work for WhatsApp
+   * conversations without auth. The identifier is the conversation customerId
+   * (WhatsApp JID, e.g. "258...@lid" or "...@s.whatsapp.net").
+   */
+  async resolveOrCreateWhatsAppUser(customerId: string) {
+    let user = await this.prisma.user.findUnique({ where: { firebaseUid: customerId } });
+    if (user) return user;
+
+    let phone = customerId;
+    if (customerId.includes('@')) {
+      const [local, domain] = customerId.split('@');
+      if (domain === 'lid') {
+        // LID cannot be reversed to a phone number; use the LID as unique phone key.
+        phone = `lid:${local}`;
+      } else {
+        phone = local;
+      }
+    }
+
+    user = await this.prisma.user.findUnique({ where: { phone } });
+    if (user) return user;
+
+    return this.prisma.user.create({
+      data: {
+        firebaseUid: customerId,
+        phone,
+        firstName: 'Cliente WhatsApp',
+        role: 'USER',
+        status: 'active',
+      },
+    });
+  }
+
   async generateResponse(message: string): Promise<string> {
     return this.generateResponseWithHistory(message, []);
+  }
+
+  private buildToolDeclarations() {
+    return [
+      {
+        name: 'search_catalog',
+        description:
+          'Search for products in the catalog by query string. Returns product information including id, name, price, stock, and category.',
+        parameters: {
+          type: 'object' as const,
+          properties: {
+            q: {
+              type: 'string' as const,
+              description: 'The search query (product name, SKU, description, or category)',
+            },
+          },
+          required: ['q'] as const,
+        },
+      },
+      {
+        name: 'add_to_cart',
+        description: 'Add a product to the customer cart. Requires a productId obtained from search_catalog.',
+        parameters: {
+          type: 'object' as const,
+          properties: {
+            productId: { type: 'string' as const, description: 'Product id returned by search_catalog' },
+            quantity: { type: 'number' as const, description: 'Quantity to add (default 1)' },
+          },
+          required: ['productId'] as const,
+        },
+      },
+      {
+        name: 'view_cart',
+        description: 'Show the current contents of the customer cart (items, quantities, subtotal, total).',
+        parameters: { type: 'object' as const, properties: {}, required: [] as const },
+      },
+      {
+        name: 'remove_from_cart',
+        description: 'Remove a product from the customer cart entirely (or decrement by quantity when provided).',
+        parameters: {
+          type: 'object' as const,
+          properties: {
+            productId: { type: 'string' as const, description: 'Product id to remove' },
+          },
+          required: ['productId'] as const,
+        },
+      },
+      {
+        name: 'clear_cart',
+        description: 'Remove ALL items from the customer cart.',
+        parameters: { type: 'object' as const, properties: {}, required: [] as const },
+      },
+      {
+        name: 'request_order_confirmation',
+        description:
+          'Build the order summary from the current cart and ask the customer to confirm. Returns summary; does NOT create the order.',
+        parameters: { type: 'object' as const, properties: {}, required: [] as const },
+      },
+      {
+        name: 'create_order',
+        description:
+          'Create the real order from the confirmed cart. ONLY call after the customer explicitly confirmed the summary shown by request_order_confirmation.',
+        parameters: {
+          type: 'object' as const,
+          properties: {
+            deliveryZone: {
+              type: 'string' as const,
+              description: 'Delivery zone: KK5000 (default) or KILAMBA',
+            },
+            deliveryReference: { type: 'string' as const, description: 'Delivery reference/location of the customer' },
+            paymentMethod: { type: 'string' as const, description: 'CASH (default) or APPYPAY' },
+            notes: { type: 'string' as const, description: 'Optional order notes' },
+          },
+          required: [] as const,
+        },
+      },
+    ];
+  }
+
+  private formatCartForAI(cart: any) {
+    const items = (cart?.items ?? []).map((i: any) => ({
+      productId: i.productId,
+      name: i.product?.name,
+      quantity: i.quantity,
+      unitPrice: Number(i.price),
+      lineTotal: Number(i.price) * i.quantity,
+    }));
+    const subtotal = Number(cart?.subtotal ?? 0);
+    const deliveryFee = Number(cart?.deliveryFee ?? 0);
+    const total = Number(cart?.total ?? 0);
+    return { items, isEmpty: items.length === 0, subtotal, deliveryFee, total };
+  }
+
+  private buildOrderSummary(summary: any) {
+    const lines = (summary.items ?? []).map(
+      (i: any) => `${i.quantity}x ${i.product?.name ?? i.name} — ${Number(i.price) * i.quantity} Kz`,
+    );
+    return [
+      'Resumo do pedido:',
+      ...lines,
+      `Subtotal: ${summary.subtotal} Kz`,
+      `Taxa de entrega: ${summary.deliveryFee} Kz`,
+      `Total: ${summary.total} Kz`,
+      '',
+      'Confirma este pedido? (sim/não)',
+    ].join('\n');
+  }
+
+  /**
+   * Execute one tool call. All cart/order operations are delegated to the
+   * existing CartService/OrdersService to avoid duplicate business logic.
+   * externalMessageId keeps the idempotency contract of CartService/OrdersService.
+   */
+  private async executeToolCall(
+    call: { name: string; args: any },
+    customerId: string | undefined,
+    externalMessageId: string,
+  ): Promise<{ ok: boolean; result: any }> {
+    const customerRequired = call.name !== 'search_catalog';
+    if (customerRequired && !customerId) {
+      return { ok: false, result: { error: 'Cliente não identificado nesta conversa.' } };
+    }
+    switch (call.name) {
+      case 'search_catalog': {
+        const results = await this.productsService.search(String(call.args?.q ?? ''));
+        return {
+          ok: true,
+          result: {
+            results: results.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              category: p.category,
+              price: p.price,
+              discountPrice: p.discountPrice,
+              stock: p.stock,
+              sku: p.sku,
+            })),
+          },
+        };
+      }
+      case 'add_to_cart': {
+        const user = await this.resolveOrCreateWhatsAppUser(customerId);
+        const quantity = Math.max(1, Math.floor(Number(call.args?.quantity ?? 1)));
+        const { cart, idempotent } = await this.cartService.addItem(
+          user.id,
+          String(call.args?.productId),
+          quantity,
+          externalMessageId,
+        );
+        return { ok: true, result: { idempotent: !!idempotent, cart: this.formatCartForAI(cart) } };
+      }
+      case 'view_cart': {
+        const user = await this.resolveOrCreateWhatsAppUser(customerId);
+        const cart = await this.cartService.getCart(user.id);
+        return { ok: true, result: { cart: this.formatCartForAI(cart) } };
+      }
+      case 'remove_from_cart': {
+        const user = await this.resolveOrCreateWhatsAppUser(customerId);
+        const { cart } = await this.cartService.removeItem(
+          user.id,
+          String(call.args?.productId),
+          externalMessageId,
+        );
+        return { ok: true, result: { cart: this.formatCartForAI(cart) } };
+      }
+      case 'clear_cart': {
+        const user = await this.resolveOrCreateWhatsAppUser(customerId);
+        const { cart } = await this.cartService.clearCart(user.id, externalMessageId);
+        return { ok: true, result: { cart: this.formatCartForAI(cart) } };
+      }
+      case 'request_order_confirmation': {
+        const user = await this.resolveOrCreateWhatsAppUser(customerId);
+        const cart = await this.cartService.getCart(user.id);
+        const formatted = this.formatCartForAI(cart);
+        if (formatted.isEmpty) {
+          return { ok: false, result: { error: 'Carrinho vazio. Adicione produtos antes de finalizar o pedido.' } };
+        }
+        return { ok: true, result: { summary: formatted } };
+      }
+      case 'create_order': {
+        const user = await this.resolveOrCreateWhatsAppUser(customerId);
+        const created = await this.ordersService.create(
+          {
+            deliveryZone: call.args?.deliveryZone,
+            deliveryReference: call.args?.deliveryReference,
+            paymentMethod: call.args?.paymentMethod,
+            notes: call.args?.notes,
+            externalMessageId,
+          },
+          user.id,
+        );
+        const order: any = created.order ?? {};
+        return {
+          ok: true,
+          result: {
+            success: true,
+            orderNumber: created.orderNumber,
+            totalAmount: Number(created.totalAmount ?? order.totalAmount ?? 0),
+          },
+        };
+      }
+      default:
+        return { ok: false, result: { error: `Unknown tool: ${call.name}` } };
+    }
   }
 
   async generateResponseWithHistory(
     message: string,
     conversationHistory: any[],
+    customerId?: string,
+    externalMessageId: string = '',
   ): Promise<string> {
     if (!this.isConfigured) {
       return 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.';
     }
 
-    const errorFallbacks = [
-      'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.',
-      'Neste momento estou com muitas solicitações. Tente novamente em alguns instantes.',
-      'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.',
-      'Desculpe, ocorreu um erro ao processar sua mensagem.',
-      'Desculpe, não consegui gerar uma resposta no momento.',
-    ];
-
     const contents: any[] = [];
 
     if (conversationHistory && conversationHistory.length > 0) {
-      // Filter out error fallback messages
-      const filteredHistory = conversationHistory.filter(msg => {
+      const filteredHistory = conversationHistory.filter((msg) => {
         if (!msg.content) return true;
-        return !errorFallbacks.some(fallback => msg.content.includes(fallback));
+        return !AI_ERROR_FALLBACKS.some((fallback) => msg.content.includes(fallback));
       });
 
       let sortedHistory = [...filteredHistory];
       if (sortedHistory[0]?.timestamp && sortedHistory[sortedHistory.length - 1]?.timestamp) {
-        sortedHistory.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        sortedHistory.sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        );
       }
 
       for (const msg of sortedHistory) {
@@ -82,9 +341,10 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
     }
 
     const lastHistoryMsg = contents[contents.length - 1];
-    const isDuplicated = lastHistoryMsg && 
-                         lastHistoryMsg.role === 'user' && 
-                         lastHistoryMsg.parts.some((p: any) => p.text === message);
+    const isDuplicated =
+      lastHistoryMsg &&
+      lastHistoryMsg.role === 'user' &&
+      lastHistoryMsg.parts.some((p: any) => p.text === message);
 
     if (!isDuplicated) {
       contents.push({
@@ -93,31 +353,17 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
       });
     }
 
-    const searchCatalogFunction = {
-      name: 'search_catalog',
-      description: 'Search for products in the catalog by query string. Returns product information including id, name, price, stock, and category.',
-      parameters: {
-        type: 'object' as const,
-        properties: {
-          q: { type: 'string' as const, description: 'The search query (product name, SKU, description, or category)' },
-        },
-        required: ['q'] as const,
-      },
-    };
+    const tools = [{ functionDeclarations: this.buildToolDeclarations() }];
 
     try {
       const initialContents = JSON.parse(JSON.stringify(contents));
-      this.logger.log(`Contents sent to model (initial): ${JSON.stringify(initialContents)}`);
-
       const result = await this.model.generateContent({
         contents: initialContents,
-        tools: [{ functionDeclarations: [searchCatalogFunction] }],
+        tools,
         toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
       });
 
       const response = await result.response;
-      this.logger.log(`Raw response from Gemini: ${JSON.stringify(response)}`);
-
       const candidate = response.candidates?.[0];
       const parts = candidate?.content?.parts || [];
       const functionCalls = parts.filter((p: any) => p.functionCall);
@@ -125,45 +371,35 @@ Após obter os resultados da busca, você deve basear sua resposta exclusivament
       if (functionCalls.length > 0) {
         this.logger.log(`Found ${functionCalls.length} function calls`);
 
-        const modelContent = { role: 'model', ...candidate.content };
-        contents.push(modelContent);
+        // Preserve the model's tool-request turn exactly (keeps thoughtSignature).
+        contents.push({ role: 'model', ...JSON.parse(JSON.stringify(candidate.content)) });
 
         for (const part of functionCalls) {
           const call = part.functionCall;
-          if (call.name === 'search_catalog') {
-            const query = call.args.q;
-            this.logger.log(`Executing search_catalog: ${query}`);
-            const searchResults = await this.productsService.search(query);
-
-            const formattedResults = searchResults.map((p: any) => ({
-              id: p.id,
-              name: p.name,
-              description: p.description,
-              category: p.category, // Pass through exactly as in ProductsService (to match test expectation)
-              price: p.price,
-              discountPrice: p.discountPrice,
-              stock: p.stock,
-              sku: p.sku
-            }));
-
-            contents.push({
-              role: 'user',
-              parts: [{
-                functionResponse: {
-                  name: 'search_catalog',
-                  response: { results: formattedResults },
-                },
-              }],
-            });
-            break;
+          this.logger.log(`Executing tool ${call.name} with args ${JSON.stringify(call.args ?? {})}`);
+          let toolResult: { ok: boolean; result: any };
+          try {
+            toolResult = await this.executeToolCall(call, customerId, externalMessageId);
+          } catch (toolError: any) {
+            this.logger.error(`Tool ${call.name} failed: ${toolError.message}`, toolError.stack);
+            toolResult = { ok: false, result: { error: toolError?.message ?? 'Tool execution failed' } };
           }
+          contents.push({
+            role: 'user',
+            parts: [
+              {
+                functionResponse: {
+                  name: call.name,
+                  response: toolResult.result,
+                },
+              },
+            ],
+          });
         }
-
-        this.logger.log(`Contents for final generation: ${JSON.stringify(contents)}`);
 
         const finalResult = await this.model.generateContent({
           contents,
-          tools: [{ functionDeclarations: [searchCatalogFunction] }],
+          tools,
           toolConfig: { functionCallingConfig: { mode: 'NONE' } },
         });
 
