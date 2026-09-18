@@ -5,9 +5,11 @@ import { WhatsAppService } from './whatsapp.service';
 import { AIService } from '../ai/ai.service';
 import { ConversationModule } from '../conversation/conversation.module';
 import { ProductsModule } from '../products/products.module';
+import { CartModule } from '../cart/cart.module';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
-  imports: [HttpModule, ConversationModule, ProductsModule],
+  imports: [HttpModule, ConversationModule, ProductsModule, CartModule, OrdersModule],
   controllers: [WhatsAppController],
   providers: [WhatsAppService, AIService],
 })

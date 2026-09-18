@@ -17,6 +17,21 @@ import { AIService } from './ai.service';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductsService } from '../products/products.service';
+import { CartService } from '../cart/cart.service';
+import { OrdersService } from '../orders/orders.service';
+
+const cartServiceMock = {
+  getCart: jest.fn(),
+  getCartWithItems: jest.fn(),
+  addItem: jest.fn(),
+  updateItem: jest.fn(),
+  removeItem: jest.fn(),
+  clearCart: jest.fn(),
+};
+
+const ordersServiceMock = {
+  create: jest.fn(),
+};
 
 describe('AIService', () => {
   let service: AIService;
@@ -44,6 +59,8 @@ describe('AIService', () => {
         },
         { provide: PrismaService, useValue: {} },
         { provide: ProductsService, useValue: { search: jest.fn() } },
+        { provide: CartService, useValue: cartServiceMock },
+        { provide: OrdersService, useValue: ordersServiceMock },
       ],
     }).compile();
 
@@ -80,6 +97,8 @@ describe('AIService', () => {
         },
         { provide: PrismaService, useValue: {} },
         { provide: ProductsService, useValue: { search: jest.fn().mockResolvedValue([]) } },
+        { provide: CartService, useValue: cartServiceMock },
+        { provide: OrdersService, useValue: ordersServiceMock },
       ],
     }).compile();
 

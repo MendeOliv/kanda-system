@@ -57,8 +57,12 @@ export class CartService {
     }
   }
 
-  private async recalc(cartId: string) {
-    const items = await this.prisma.cartItem.findMany({
+  /**
+   * Recalculate cart totals. MUST be called with the transaction client so the
+   * totals update is atomic with the item changes that triggered it.
+   */
+  private async recalc(tx: PrismaService, cartId: string) {
+    const items = await tx.cartItem.findMany({
       where: { cartId },
       include: { product: true },
     });
@@ -69,7 +73,7 @@ export class CartService {
     const deliveryFee = subtotal >= 10000 ? 0 : 500;
     const total = subtotal + deliveryFee;
 
-    return this.prisma.cart.update({
+    return tx.cart.update({
       where: { id: cartId },
       data: { subtotal, deliveryFee, total },
       include: { items: { include: { product: true } } },
@@ -90,12 +94,13 @@ export class CartService {
 
   async getCart(userId: string) {
     const result = await this.getCartWithItems(userId);
-    return {
-      items: result?.items ?? [],
-      subtotal: result ? Number(result.subtotal) : 0,
-      deliveryFee: result ? Number(result.deliveryFee) : 0,
-      total: result ? Number(result.total) : 0,
-    };
+    const items = result?.items ?? [];
+    // Derive totals from items (same formula as recalc) so the response is
+    // never stale when the persisted cart row was created with zero defaults.
+    const subtotal = items.reduce((sum, i) => sum + Number(i.price) * i.quantity, 0);
+    const deliveryFee = subtotal >= 10000 ? 0 : 500;
+    const total = subtotal + deliveryFee;
+    return { items, subtotal, deliveryFee, total };
   }
 
   async addItem(
@@ -120,6 +125,9 @@ export class CartService {
     });
     if (!product) throw new NotFoundException('Produto não encontrado');
     if (quantity <= 0) throw new BadRequestException('Quantidade inválida');
+    if (product.status !== 'active') {
+      throw new BadRequestException('Produto inativo');
+    }
     if (product.stock < quantity) {
       throw new BadRequestException('Stock insuficiente');
     }
@@ -146,8 +154,8 @@ export class CartService {
         });
       }
 
-      // Recalculate cart totals
-      return this.recalc(cart.id);
+      // Recalculate cart totals (inside the same transaction)
+      return this.recalc(t, cart.id);
     });
 
     return { success: true, cart: updatedCart, idempotent: undefined };
@@ -196,8 +204,8 @@ export class CartService {
         });
       }
 
-      // Recalculate cart totals
-      return this.recalc(cart.id);
+      // Recalculate cart totals (inside the same transaction)
+      return this.recalc(t, cart.id);
     });
 
     return { success: true, cart: updatedCart, idempotent: undefined };
@@ -238,8 +246,8 @@ export class CartService {
         });
       }
 
-      // Recalculate cart totals
-      return this.recalc(cart.id);
+      // Recalculate cart totals (inside the same transaction)
+      return this.recalc(t, cart.id);
     });
 
     return { success: true, cart: updatedCart, idempotent: undefined };
@@ -275,8 +283,8 @@ export class CartService {
         });
       }
 
-      // Recalculate cart totals
-      return this.recalc(cart.id);
+      // Recalculate cart totals (inside the same transaction)
+      return this.recalc(t, cart.id);
     });
 
     return { success: true, cart: updatedCart, idempotent: undefined };
