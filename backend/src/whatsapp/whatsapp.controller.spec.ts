@@ -116,7 +116,42 @@ describe('WhatsAppController', () => {
       'Hello',
       [],
       '25838925955116@lid',
+      'test-external-id',
     );
     expect(whatsappService.sendMessage).toHaveBeenCalledWith('+1234567890', 'Test response');
+  });
+
+  it('propagates the original inbound externalMessageId to AIService', async () => {
+    await controller.receiveMessage({
+      from: '+244900000000',
+      body: 'quero finalizar o pedido',
+      externalMessageId: 'WA-MSG-ABC-123',
+      timestamp: 1788271390,
+      type: 'chat',
+    });
+
+    const call = (aiService.generateResponseWithHistory as jest.Mock).mock.calls[0];
+    // 1: message, 2: history, 3: customerId (JID preserved, LID not reversed), 4: externalMessageId
+    expect(call[0]).toBe('quero finalizar o pedido');
+    expect(call[2]).toBe('25838925955116@lid');
+    expect(call[3]).toBe('WA-MSG-ABC-123');
+    expect(aiService.generateResponseWithHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores duplicated inbound messages (externalMessageId already stored)', async () => {
+    (conversationService.messageExists as jest.Mock).mockResolvedValueOnce(true);
+
+    const result = await controller.receiveMessage({
+      from: '+244900000001',
+      body: 'quero finalizar o pedido',
+      externalMessageId: 'WA-MSG-DUP',
+      timestamp: 1788271390,
+      type: 'chat',
+    });
+
+    expect(result).toEqual({ status: 'Message received (duplicate ignored)' });
+    expect(conversationService.addMessage).not.toHaveBeenCalled();
+    expect(aiService.generateResponseWithHistory).not.toHaveBeenCalled();
+    expect(whatsappService.sendMessage).not.toHaveBeenCalled();
   });
 });

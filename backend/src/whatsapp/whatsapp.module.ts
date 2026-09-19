@@ -7,9 +7,10 @@ import { ConversationModule } from '../conversation/conversation.module';
 import { ProductsModule } from '../products/products.module';
 import { CartModule } from '../cart/cart.module';
 import { OrdersModule } from '../orders/orders.module';
+import { ConfirmationModule } from '../confirmation/confirmation.module';
 
 @Module({
-  imports: [HttpModule, ConversationModule, ProductsModule, CartModule, OrdersModule],
+  imports: [HttpModule, ConversationModule, ProductsModule, CartModule, OrdersModule, ConfirmationModule],
   controllers: [WhatsAppController],
   providers: [WhatsAppService, AIService],
 })

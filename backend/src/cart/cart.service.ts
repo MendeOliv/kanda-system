@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { ConfirmationService } from '../confirmation/confirmation.service';
 
 export interface CartReturn {
   items: Array<{
@@ -25,7 +26,28 @@ export interface CartReturn {
 
 @Injectable()
 export class CartService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(CartService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private confirmationService: ConfirmationService,
+  ) {}
+
+  /**
+   * Any successful cart mutation invalidates a pending order confirmation: the
+   * customer must see the updated summary before an order can be created.
+   * A failure here is logged but never breaks the mutation — the stale row keeps
+   * its old fingerprint, so create_order stays blocked (fail-closed).
+   */
+  private async invalidatePendingConfirmation(userId: string) {
+    try {
+      await this.confirmationService.invalidate(userId);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to invalidate pending confirmation for user ${userId}: ${error?.message}`,
+      );
+    }
+  }
 
   /**
    * Get or create a cart for the user, handling concurrent creation safely.
@@ -158,6 +180,8 @@ export class CartService {
       return this.recalc(t, cart.id);
     });
 
+    await this.invalidatePendingConfirmation(userId);
+
     return { success: true, cart: updatedCart, idempotent: undefined };
   }
 
@@ -208,6 +232,8 @@ export class CartService {
       return this.recalc(t, cart.id);
     });
 
+    await this.invalidatePendingConfirmation(userId);
+
     return { success: true, cart: updatedCart, idempotent: undefined };
   }
 
@@ -233,6 +259,7 @@ export class CartService {
     // Perform atomic operations inside transaction
     const updatedCart = await this.prisma.$transaction(async (tx) => {
       const t = tx as unknown as PrismaService;
+      // TOTAL REMOVAL: the whole cart line is deleted, there is no decrement here.
       await t.cartItem.delete({
         where: { cartId_productId: { cartId: cart.id, productId } },
       }).catch(() => {
@@ -249,6 +276,8 @@ export class CartService {
       // Recalculate cart totals (inside the same transaction)
       return this.recalc(t, cart.id);
     });
+
+    await this.invalidatePendingConfirmation(userId);
 
     return { success: true, cart: updatedCart, idempotent: undefined };
   }
@@ -286,6 +315,8 @@ export class CartService {
       // Recalculate cart totals (inside the same transaction)
       return this.recalc(t, cart.id);
     });
+
+    await this.invalidatePendingConfirmation(userId);
 
     return { success: true, cart: updatedCart, idempotent: undefined };
   }

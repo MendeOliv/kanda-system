@@ -95,13 +95,16 @@ export class WhatsAppController {
       });
       this.logger.log(`User message saved with ID: ${userMessage.id}`);
 
-      // Generate AI response (with customer JID so cart/order tools can resolve the user)
+      // Generate AI response. The customer JID lets cart/order tools resolve the user
+      // and the inbound WhatsApp message id is propagated untouched so the cart/order
+      // idempotency checks work on the real path.
       let responseText = '';
       try {
         responseText = await this.aiService.generateResponseWithHistory(
           body,
           recentMessages,
           conversation.customerId,
+          externalMessageId,
         );
       } catch (error) {
         this.logger.error(`Erro ao gerar resposta com IA: ${error.message}`, error.stack);
