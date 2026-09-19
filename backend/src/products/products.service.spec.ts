@@ -45,7 +45,8 @@ const createProductDto: CreateProductDto = {
 
 describe('ProductsService', () => {
   let service: ProductsService;
-  let prisma: PrismaService;
+  // PrismaService delegates are jest.Mocks in this spec, so the mock is typed loosely.
+  let prisma: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -171,6 +172,50 @@ describe('ProductsService', () => {
       prisma.product.findUnique.mockResolvedValueOnce(null);
 
       await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /*  Catalog search used by the WhatsApp AI tool (search_catalog)     */
+  /* ---------------------------------------------------------------- */
+
+  describe('search', () => {
+    it('should find an existing product by name', async () => {
+      prisma.product.findMany.mockResolvedValueOnce([mockProduct]);
+
+      const result = await service.search('Pão');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Pão Artesanal');
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 10, include: { category: true } }),
+      );
+    });
+
+    it('should restrict the query to active products (inactive products are never returned)', async () => {
+      prisma.product.findMany.mockResolvedValueOnce([]);
+
+      const result = await service.search('Descontinuado');
+
+      expect(result).toEqual([]);
+      const where = prisma.product.findMany.mock.calls[0][0].where;
+      expect(where.status).toBe('active');
+      expect(where.OR).toEqual(
+        expect.arrayContaining([
+          { name: { contains: 'Descontinuado', mode: 'insensitive' } },
+        ]),
+      );
+    });
+
+    it('should return an empty list for an unknown product', async () => {
+      prisma.product.findMany.mockResolvedValueOnce([]);
+
+      await expect(service.search('produto-inexistente-xyz')).resolves.toEqual([]);
+    });
+
+    it('should not hit the database for an empty query', async () => {
+      await expect(service.search('   ')).resolves.toEqual([]);
+      expect(prisma.product.findMany).not.toHaveBeenCalled();
     });
   });
 });

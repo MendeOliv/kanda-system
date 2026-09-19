@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ProductsService } from '../products/products.service';
 import { CartService } from '../cart/cart.service';
 import { OrdersService } from '../orders/orders.service';
+import { ConfirmationService, buildCartFingerprint } from '../confirmation/confirmation.service';
 
 export const AI_ERROR_FALLBACKS = [
   'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.',
@@ -20,10 +21,10 @@ FERRAMENTAS:
 - search_catalog: use SEMPRE que o usuário perguntar sobre produtos, preços, estoque ou disponibilidade. Não invente produtos.
 - add_to_cart: use quando o usuário quiser adicionar um produto ao carrinho (precisa do productId de uma busca prévia no search_catalog). Confirme o item adicionado mostrando nome, quantidade e subtotal.
 - view_cart: use quando o usuário quiser ver o carrinho. Liste os itens, subtotal e total.
-- remove_from_cart: use quando o usuário quiser remover um produto ou item do carrinho.
+- remove_from_cart: use quando o usuário quiser remover um produto do carrinho. REMOÇÃO TOTAL: o produto é retirado por completo, nunca é um decremento de quantidade.
 - clear_cart: use quando o usuário quiser esvaziar o carrinho.
-- request_order_confirmation: use quando o usuário demonstrar intenção de finalizar a compra (ex: "fechar pedido", "finalizar", "confirmar"). Esta ferramenta devolve o resumo do carrinho; apresente o resumo e pergunte se o usuário CONFIRMA o pedido. NÃO crie o pedido ainda.
-- create_order: use APENAS quando o usuário confirmar explicitamente o pedido após ver o resumo (ex: "sim, confirmo", "pode fechar"). Cria o pedido real e devolve o número do pedido. Nunca chame sem confirmação explícita.
+- request_order_confirmation: use quando o usuário demonstrar intenção de finalizar a compra (ex: "fechar pedido", "finalizar", "confirmar"). Esta ferramenta devolve o resumo do carrinho e registra uma confirmação pendente; apresente o resumo e pergunte se o usuário CONFIRMA o pedido. NÃO crie o pedido ainda.
+- create_order: use APENAS quando o usuário confirmar explicitamente o pedido numa mensagem POSTERIOR ao resumo (ex: "sim, confirmo", "pode fechar"). Se não existir uma confirmação pendente válida, o sistema recusa a criação: nesse caso apresente o resumo e peça a confirmação. Nunca chame sem confirmação explícita.
 
 REGRAS:
 - Baseie informações de produtos exclusivamente nos resultados das ferramentas.
@@ -42,6 +43,7 @@ export class AIService {
     private productsService: ProductsService,
     private cartService: CartService,
     private ordersService: OrdersService,
+    private confirmationService: ConfirmationService,
   ) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (apiKey) {
@@ -136,11 +138,11 @@ export class AIService {
       },
       {
         name: 'remove_from_cart',
-        description: 'Remove a product from the customer cart entirely (or decrement by quantity when provided).',
+        description: "Remove the specified product completely from the customer's cart.",
         parameters: {
           type: 'object' as const,
           properties: {
-            productId: { type: 'string' as const, description: 'Product id to remove' },
+            productId: { type: 'string' as const, description: 'Product id to remove from the cart' },
           },
           required: ['productId'] as const,
         },
@@ -153,13 +155,13 @@ export class AIService {
       {
         name: 'request_order_confirmation',
         description:
-          'Build the order summary from the current cart and ask the customer to confirm. Returns summary; does NOT create the order.',
+          'Build the order summary from the current cart, register a pending confirmation and ask the customer to confirm. Returns the summary; does NOT create the order.',
         parameters: { type: 'object' as const, properties: {}, required: [] as const },
       },
       {
         name: 'create_order',
         description:
-          'Create the real order from the confirmed cart. ONLY call after the customer explicitly confirmed the summary shown by request_order_confirmation.',
+          'Create the real order from the confirmed cart. ONLY call after the customer explicitly confirmed, in a PREVIOUS message, the summary returned by request_order_confirmation. The order is refused when no valid confirmation is pending.',
         parameters: {
           type: 'object' as const,
           properties: {
@@ -211,10 +213,24 @@ export class AIService {
    * existing CartService/OrdersService to avoid duplicate business logic.
    * externalMessageId keeps the idempotency contract of CartService/OrdersService.
    */
+  /**
+   * One inbound WhatsApp message normally triggers a single cart mutation, and the
+   * raw externalMessageId is used as the idempotency key. When a single message
+   * triggers several mutations, the extra ones get a deterministic scoped token
+   * ("<id>#<n>") so they do not collide on the ProcessedMessage unique key while a
+   * retry of the same message replays the very same tokens (still idempotent).
+   */
+  private cartMutationToken(baseExternalMessageId: string, counter: { value: number }): string {
+    if (!baseExternalMessageId) return '';
+    const index = counter.value++;
+    return index === 0 ? baseExternalMessageId : `${baseExternalMessageId}#${index}`;
+  }
+
   private async executeToolCall(
     call: { name: string; args: any },
     customerId: string | undefined,
     externalMessageId: string,
+    cartMutationCounter: { value: number },
   ): Promise<{ ok: boolean; result: any }> {
     const customerRequired = call.name !== 'search_catalog';
     if (customerRequired && !customerId) {
@@ -246,7 +262,7 @@ export class AIService {
           user.id,
           String(call.args?.productId),
           quantity,
-          externalMessageId,
+          this.cartMutationToken(externalMessageId, cartMutationCounter),
         );
         return { ok: true, result: { idempotent: !!idempotent, cart: this.formatCartForAI(cart) } };
       }
@@ -256,17 +272,21 @@ export class AIService {
         return { ok: true, result: { cart: this.formatCartForAI(cart) } };
       }
       case 'remove_from_cart': {
+        // TOTAL REMOVAL: the whole cart line is deleted. Never a quantity decrement.
         const user = await this.resolveOrCreateWhatsAppUser(customerId);
         const { cart } = await this.cartService.removeItem(
           user.id,
           String(call.args?.productId),
-          externalMessageId,
+          this.cartMutationToken(externalMessageId, cartMutationCounter),
         );
         return { ok: true, result: { cart: this.formatCartForAI(cart) } };
       }
       case 'clear_cart': {
         const user = await this.resolveOrCreateWhatsAppUser(customerId);
-        const { cart } = await this.cartService.clearCart(user.id, externalMessageId);
+        const { cart } = await this.cartService.clearCart(
+          user.id,
+          this.cartMutationToken(externalMessageId, cartMutationCounter),
+        );
         return { ok: true, result: { cart: this.formatCartForAI(cart) } };
       }
       case 'request_order_confirmation': {
@@ -274,12 +294,37 @@ export class AIService {
         const cart = await this.cartService.getCart(user.id);
         const formatted = this.formatCartForAI(cart);
         if (formatted.isEmpty) {
+          await this.confirmationService.invalidate(user.id);
           return { ok: false, result: { error: 'Carrinho vazio. Adicione produtos antes de finalizar o pedido.' } };
         }
-        return { ok: true, result: { summary: formatted } };
+        // Persist CONFIRMATION_PENDING bound to exactly these cart contents.
+        await this.confirmationService.requestConfirmation(
+          user.id,
+          buildCartFingerprint(cart.items ?? []),
+          { externalMessageId },
+        );
+        return { ok: true, result: { summary: formatted, confirmationRequired: true } };
       }
       case 'create_order': {
         const user = await this.resolveOrCreateWhatsAppUser(customerId);
+        const cart = await this.cartService.getCart(user.id);
+        const formatted = this.formatCartForAI(cart);
+        if (formatted.isEmpty) {
+          await this.confirmationService.invalidate(user.id);
+          return { ok: false, result: { error: 'Carrinho vazio ou não encontrado.' } };
+        }
+
+        // Deterministic gate: the Gemini instruction is not the protection.
+        const gate = await this.confirmationService.verify(
+          user.id,
+          buildCartFingerprint(cart.items ?? []),
+          externalMessageId,
+        );
+        if (!gate.allowed) {
+          this.logger.warn(`create_order refused (${externalMessageId}): ${gate.reason}`);
+          return { ok: false, result: { error: gate.reason, confirmationRequired: true } };
+        }
+
         const created = await this.ordersService.create(
           {
             deliveryZone: call.args?.deliveryZone,
@@ -291,6 +336,8 @@ export class AIService {
           user.id,
         );
         const order: any = created.order ?? {};
+        // Successful order clears the pending confirmation.
+        await this.confirmationService.clear(user.id);
         return {
           ok: true,
           result: {
@@ -374,12 +421,20 @@ export class AIService {
         // Preserve the model's tool-request turn exactly (keeps thoughtSignature).
         contents.push({ role: 'model', ...JSON.parse(JSON.stringify(candidate.content)) });
 
+        // Per-turn counter used to scope the idempotency token of multiple cart mutations.
+        const cartMutationCounter = { value: 0 };
+
         for (const part of functionCalls) {
           const call = part.functionCall;
           this.logger.log(`Executing tool ${call.name} with args ${JSON.stringify(call.args ?? {})}`);
           let toolResult: { ok: boolean; result: any };
           try {
-            toolResult = await this.executeToolCall(call, customerId, externalMessageId);
+            toolResult = await this.executeToolCall(
+              call,
+              customerId,
+              externalMessageId,
+              cartMutationCounter,
+            );
           } catch (toolError: any) {
             this.logger.error(`Tool ${call.name} failed: ${toolError.message}`, toolError.stack);
             toolResult = { ok: false, result: { error: toolError?.message ?? 'Tool execution failed' } };

@@ -19,6 +19,28 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ProductsService } from '../products/products.service';
 import { CartService } from '../cart/cart.service';
 import { OrdersService } from '../orders/orders.service';
+import { ConfirmationService } from '../confirmation/confirmation.service';
+
+const prismaMock: any = {
+  user: { findUnique: jest.fn(), create: jest.fn() },
+};
+
+const waUser = {
+  id: 'user-1',
+  firebaseUid: '25838925955116@lid',
+  phone: 'lid:25838925955116',
+  firstName: 'Cliente WhatsApp',
+  role: 'USER',
+  status: 'active',
+};
+
+const confirmationServiceMock = {
+  requestConfirmation: jest.fn(),
+  getPending: jest.fn(),
+  invalidate: jest.fn(),
+  clear: jest.fn(),
+  verify: jest.fn(),
+};
 
 const cartServiceMock = {
   getCart: jest.fn(),
@@ -57,10 +79,11 @@ describe('AIService', () => {
             }),
           },
         },
-        { provide: PrismaService, useValue: {} },
+        { provide: PrismaService, useValue: prismaMock },
         { provide: ProductsService, useValue: { search: jest.fn() } },
         { provide: CartService, useValue: cartServiceMock },
         { provide: OrdersService, useValue: ordersServiceMock },
+        { provide: ConfirmationService, useValue: confirmationServiceMock },
       ],
     }).compile();
 
@@ -95,10 +118,11 @@ describe('AIService', () => {
             }),
           },
         },
-        { provide: PrismaService, useValue: {} },
+        { provide: PrismaService, useValue: prismaMock },
         { provide: ProductsService, useValue: { search: jest.fn().mockResolvedValue([]) } },
         { provide: CartService, useValue: cartServiceMock },
         { provide: OrdersService, useValue: ordersServiceMock },
+        { provide: ConfirmationService, useValue: confirmationServiceMock },
       ],
     }).compile();
 
@@ -179,7 +203,7 @@ describe('AIService', () => {
       });
 
       // Mock ProductsService.search
-      productsService.search.mockResolvedValueOnce(mockSearchResults);
+      (productsService.search as jest.Mock).mockResolvedValueOnce(mockSearchResults);
 
       const result = await service.generateResponseWithHistory('Coca cola', []);
 
@@ -266,7 +290,7 @@ describe('AIService', () => {
       });
 
       // Mock ProductsService.search to return empty array
-      productsService.search.mockResolvedValueOnce([]);
+      (productsService.search as jest.Mock).mockResolvedValueOnce([]);
 
       const result = await service.generateResponseWithHistory('Pepsi', []);
 
@@ -338,7 +362,7 @@ describe('AIService', () => {
         },
       });
 
-      productsService.search.mockResolvedValueOnce([{ id: 1, name: 'Test Product' }]);
+      (productsService.search as jest.Mock).mockResolvedValueOnce([{ id: 1, name: 'Test Product' }]);
 
       await service.generateResponseWithHistory('Test', []);
 
@@ -390,7 +414,7 @@ describe('AIService', () => {
         },
       });
 
-      productsService.search.mockResolvedValueOnce([]);
+      (productsService.search as jest.Mock).mockResolvedValueOnce([]);
 
       // Provide history with one previous user message
       const history = [
@@ -474,7 +498,7 @@ describe('AIService', () => {
   // NEW TESTS FOR AI-02.3
 
   it('should handle Gemini 429 quota exceeded error', async () => {
-    const mockError = new Error('Quota exceeded');
+    const mockError: any = new Error('Quota exceeded');
     mockError.status = 429;
     mockError.retryDelay = '46.375130808s';
     
@@ -520,7 +544,7 @@ describe('AIService', () => {
       },
     });
 
-    productsService.search.mockResolvedValueOnce([{ id: 1, name: 'Test Product' }]);
+    (productsService.search as jest.Mock).mockResolvedValueOnce([{ id: 1, name: 'Test Product' }]);
 
     // Provide history containing known AI error messages
     const history = [
@@ -575,6 +599,264 @@ describe('AIService', () => {
     
     expect(hasValidUserMessage).toBe(true);
     expect(hasValidAssistantMessage).toBe(true);
+  });
+
+  /* ================================================================ */
+  /*  CART-02 / CONFIRMATION GATE / ORDER via the real tool chain       */
+  /* ================================================================ */
+
+  describe('conversation history and WhatsApp identity', () => {
+    beforeEach(() => {
+      prismaMock.user.findUnique.mockResolvedValue(waUser);
+    });
+
+    it('sends the stored history in chronological order even when it is out of order', async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        response: { text: () => 'ok', candidates: [{ content: { parts: [] } }] },
+      });
+
+      const history = [
+        { role: 'model', content: 'Terceira', timestamp: new Date('2026-09-19T10:02:00Z') },
+        { role: 'user', content: 'Primeira', timestamp: new Date('2026-09-19T10:00:00Z') },
+        { role: 'model', content: 'Segunda', timestamp: new Date('2026-09-19T10:01:00Z') },
+      ];
+
+      await service.generateResponseWithHistory('nova mensagem', history);
+
+      const contents = mockGenerateContent.mock.calls[0][0].contents;
+      expect(contents.map((c: any) => c.parts[0].text)).toEqual([
+        'Primeira',
+        'Segunda',
+        'Terceira',
+        'nova mensagem',
+      ]);
+    });
+
+    it('preserves a LID identifier instead of trying to reverse it into a phone number', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockResolvedValue({ id: 'user-9' });
+
+      const user = await service.resolveOrCreateWhatsAppUser('25838925955116@lid');
+
+      expect(user.id).toBe('user-9');
+      expect(prismaMock.user.findUnique).toHaveBeenNthCalledWith(1, {
+        where: { firebaseUid: '25838925955116@lid' },
+      });
+      expect(prismaMock.user.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          firebaseUid: '25838925955116@lid',
+          phone: 'lid:25838925955116',
+        }),
+      });
+    });
+
+    it('derives the phone from a regular WhatsApp JID', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockResolvedValue({ id: 'user-10' });
+
+      await service.resolveOrCreateWhatsAppUser('244900000000@s.whatsapp.net');
+
+      expect(prismaMock.user.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ phone: '244900000000' }),
+      });
+    });
+
+    it('reuses the existing user instead of creating a duplicate', async () => {
+      const result = await service.resolveOrCreateWhatsAppUser('25838925955116@lid');
+
+      expect(result).toBe(waUser);
+      expect(prismaMock.user.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cart, confirmation and order tools', () => {
+    const toolCallResponse = (...calls: Array<{ name: string; args: any }>) => ({
+      response: {
+        candidates: [
+          {
+            content: {
+              parts: calls.map((c) => ({ functionCall: c, thoughtSignature: 'sig' })),
+            },
+          },
+        ],
+      },
+    });
+
+    const finalTextResponse = (text: string) => ({
+      response: { text: () => text, candidates: [{ content: { parts: [] } }] },
+    });
+
+    const cartWith = (items: any[]) => ({
+      items,
+      subtotal: items.reduce((s, i) => s + Number(i.price) * i.quantity, 0),
+      deliveryFee: 500,
+      total: items.reduce((s, i) => s + Number(i.price) * i.quantity, 0) + 500,
+    });
+
+    const banana = {
+      productId: 'p1',
+      quantity: 2,
+      price: 100,
+      product: { id: 'p1', name: 'Banana' },
+    };
+
+    /** Last functionResponse sent back to Gemini. */
+    const lastFunctionResponse = (callIndex = 1) => {
+      const call = mockGenerateContent.mock.calls[callIndex][0];
+      return call.contents[call.contents.length - 1].parts[0].functionResponse;
+    };
+
+    beforeEach(() => {
+      prismaMock.user.findUnique.mockResolvedValue(waUser);
+      confirmationServiceMock.invalidate.mockResolvedValue(0);
+      confirmationServiceMock.clear.mockResolvedValue(0);
+    });
+
+    it('propagates the inbound externalMessageId to CartService through the tool chain', async () => {
+      cartServiceMock.addItem.mockResolvedValue({ cart: cartWith([banana]), idempotent: false });
+      mockGenerateContent.mockResolvedValueOnce(
+        toolCallResponse({ name: 'add_to_cart', args: { productId: 'p1', quantity: 2 } }),
+      );
+      mockGenerateContent.mockResolvedValueOnce(finalTextResponse('Adicionei 2 bananas.'));
+
+      const result = await service.generateResponseWithHistory(
+        'quero 2 bananas',
+        [],
+        '25838925955116@lid',
+        'wa-msg-42',
+      );
+
+      expect(result).toBe('Adicionei 2 bananas.');
+      // customerId resolved the user and the raw inbound id was preserved
+      expect(cartServiceMock.addItem).toHaveBeenCalledWith('user-1', 'p1', 2, 'wa-msg-42');
+    });
+
+    it('scopes the idempotency token when one message triggers two cart mutations', async () => {
+      cartServiceMock.addItem.mockResolvedValue({ cart: cartWith([banana]), idempotent: false });
+      mockGenerateContent.mockResolvedValueOnce(
+        toolCallResponse(
+          { name: 'add_to_cart', args: { productId: 'p1', quantity: 1 } },
+          { name: 'add_to_cart', args: { productId: 'p2', quantity: 1 } },
+        ),
+      );
+      mockGenerateContent.mockResolvedValueOnce(finalTextResponse('Adicionei os dois.'));
+
+      await service.generateResponseWithHistory('adiciona banana e leite', [], '25838925955116@lid', 'wa-msg-7');
+
+      // Both mutations run (no ProcessedMessage collision) and stay deterministic for retries
+      expect(cartServiceMock.addItem).toHaveBeenNthCalledWith(1, 'user-1', 'p1', 1, 'wa-msg-7');
+      expect(cartServiceMock.addItem).toHaveBeenNthCalledWith(2, 'user-1', 'p2', 1, 'wa-msg-7#1');
+    });
+
+    it('remove_from_cart delegates a TOTAL removal to CartService', async () => {
+      cartServiceMock.removeItem.mockResolvedValue({ cart: cartWith([]) });
+      mockGenerateContent.mockResolvedValueOnce(
+        toolCallResponse({ name: 'remove_from_cart', args: { productId: 'p1' } }),
+      );
+      mockGenerateContent.mockResolvedValueOnce(finalTextResponse('Removi a banana.'));
+
+      await service.generateResponseWithHistory('remove as bananas', [], '25838925955116@lid', 'wa-msg-3');
+
+      expect(cartServiceMock.removeItem).toHaveBeenCalledWith('user-1', 'p1', 'wa-msg-3');
+      expect(cartServiceMock.updateItem).not.toHaveBeenCalled();
+    });
+
+    it('declares remove_from_cart as a complete removal of the product', () => {
+      const declarations = (service as any).buildToolDeclarations();
+      const removeTool = declarations.find((d: any) => d.name === 'remove_from_cart');
+      expect(removeTool.description).toBe(
+        "Remove the specified product completely from the customer's cart.",
+      );
+      expect(removeTool.parameters.required).toEqual(['productId']);
+    });
+
+    it('request_order_confirmation persists a pending confirmation bound to the cart', async () => {
+      cartServiceMock.getCart.mockResolvedValue(cartWith([banana]));
+      confirmationServiceMock.requestConfirmation.mockResolvedValue({ id: 'pc1' });
+      mockGenerateContent.mockResolvedValueOnce(
+        toolCallResponse({ name: 'request_order_confirmation', args: {} }),
+      );
+      mockGenerateContent.mockResolvedValueOnce(finalTextResponse('Confirma este pedido?'));
+
+      await service.generateResponseWithHistory('quero finalizar', [], '25838925955116@lid', 'wa-msg-10');
+
+      expect(confirmationServiceMock.requestConfirmation).toHaveBeenCalledWith(
+        'user-1',
+        'p1:2:100',
+        { externalMessageId: 'wa-msg-10' },
+      );
+      // The summary is shown, the order is NOT created
+      expect(ordersServiceMock.create).not.toHaveBeenCalled();
+    });
+
+    it('request_order_confirmation refuses an empty cart and clears any pending state', async () => {
+      cartServiceMock.getCart.mockResolvedValue(cartWith([]));
+      mockGenerateContent.mockResolvedValueOnce(
+        toolCallResponse({ name: 'request_order_confirmation', args: {} }),
+      );
+      mockGenerateContent.mockResolvedValueOnce(finalTextResponse('Seu carrinho está vazio.'));
+
+      await service.generateResponseWithHistory('finalizar', [], '25838925955116@lid', 'wa-msg-11');
+
+      expect(confirmationServiceMock.requestConfirmation).not.toHaveBeenCalled();
+      expect(confirmationServiceMock.invalidate).toHaveBeenCalledWith('user-1');
+      expect(lastFunctionResponse().response.error).toContain('Carrinho vazio');
+    });
+
+    it('BLOCKS create_order when there is no valid pending confirmation', async () => {
+      cartServiceMock.getCart.mockResolvedValue(cartWith([banana]));
+      confirmationServiceMock.verify.mockResolvedValue({
+        allowed: false,
+        reason: 'Nenhuma confirmação pendente.',
+      });
+      mockGenerateContent.mockResolvedValueOnce(toolCallResponse({ name: 'create_order', args: {} }));
+      mockGenerateContent.mockResolvedValueOnce(finalTextResponse('Preciso da sua confirmação.'));
+
+      await service.generateResponseWithHistory('sim', [], '25838925955116@lid', 'wa-msg-12');
+
+      expect(confirmationServiceMock.verify).toHaveBeenCalledWith('user-1', 'p1:2:100', 'wa-msg-12');
+      expect(ordersServiceMock.create).not.toHaveBeenCalled();
+      expect(lastFunctionResponse().response.confirmationRequired).toBe(true);
+    });
+
+    it('ALLOWS create_order with a valid pending confirmation and clears it afterwards', async () => {
+      cartServiceMock.getCart.mockResolvedValue(cartWith([banana]));
+      confirmationServiceMock.verify.mockResolvedValue({ allowed: true });
+      ordersServiceMock.create.mockResolvedValue({
+        orderNumber: 'KL-4242',
+        totalAmount: 700,
+        order: { totalAmount: 700 },
+      });
+      mockGenerateContent.mockResolvedValueOnce(toolCallResponse({ name: 'create_order', args: {} }));
+      mockGenerateContent.mockResolvedValueOnce(finalTextResponse('Pedido KL-4242 criado!'));
+
+      const result = await service.generateResponseWithHistory(
+        'sim, confirmo',
+        [],
+        '25838925955116@lid',
+        'wa-msg-13',
+      );
+
+      expect(result).toBe('Pedido KL-4242 criado!');
+      expect(ordersServiceMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({ externalMessageId: 'wa-msg-13' }),
+        'user-1',
+      );
+      expect(confirmationServiceMock.clear).toHaveBeenCalledWith('user-1');
+      expect(lastFunctionResponse().response.orderNumber).toBe('KL-4242');
+    });
+
+    it('refuses create_order with an empty cart', async () => {
+      cartServiceMock.getCart.mockResolvedValue(cartWith([]));
+      mockGenerateContent.mockResolvedValueOnce(toolCallResponse({ name: 'create_order', args: {} }));
+      mockGenerateContent.mockResolvedValueOnce(finalTextResponse('Carrinho vazio.'));
+
+      await service.generateResponseWithHistory('confirmo', [], '25838925955116@lid', 'wa-msg-14');
+
+      expect(confirmationServiceMock.verify).not.toHaveBeenCalled();
+      expect(confirmationServiceMock.invalidate).toHaveBeenCalledWith('user-1');
+      expect(ordersServiceMock.create).not.toHaveBeenCalled();
+    });
   });
 
 });

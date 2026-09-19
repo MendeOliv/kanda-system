@@ -263,6 +263,24 @@ model ProcessedMessage {
   @@index([userId])
 }
 
+/// Deterministic order-confirmation gate for the WhatsApp/AI flow.
+/// A single row per customer records the cart fingerprint that was shown to the
+/// customer and asked to be confirmed. create_order is only allowed while this
+/// row exists, has not expired, matches the current cart fingerprint and was not
+/// created by the same inbound message that is trying to create the order.
+model PendingOrderConfirmation {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  conversationId    String?
+  externalMessageId String?
+  cartFingerprint   String
+  requestedAt       DateTime @default(now())
+  expiresAt         DateTime
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 enum UserRole {
   ADMIN
   VENDOR
