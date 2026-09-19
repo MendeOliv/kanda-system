@@ -18,6 +18,7 @@ import { NewsletterModule } from './newsletter/newsletter.module';
 import { ContactModule } from './contact/contact.module';
 import { BrandModule } from './brand/brand.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
+import { RetentionModule } from './retention/retention.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -46,6 +47,7 @@ import { AppService } from './app.service';
       ContactModule,
       BrandModule,
       WhatsAppModule,
+      RetentionModule,
     ],
   controllers: [AppController],
   providers: [

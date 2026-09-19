@@ -15,6 +15,9 @@ export const AI_ERROR_FALLBACKS = [
   'Desculpe, não consegui gerar uma resposta no momento.',
 ];
 
+/** Hard upper bound on how many past conversation turns are fed to Gemini. */
+const MAX_CONTEXT_TURNS = 12;
+
 const SYSTEM_PROMPT = `Você é o assistente de vendas da Kanda no WhatsApp. Responda sempre em português de forma curta, objetiva e útil.
 
 FERRAMENTAS:
@@ -100,6 +103,35 @@ export class AIService {
 
   async generateResponse(message: string): Promise<string> {
     return this.generateResponseWithHistory(message, []);
+  }
+
+  /**
+   * Rewrite stored conversation messages into a Gemini-safe, TEXT-ONLY window.
+   *
+   * - Prior turns' functionCall / functionResponse parts are NEVER replayed, so a
+   *   previous search_catalog (or its result) cannot be re-executed or treated as a
+   *   command for the current message.
+   * - The window is bounded to the most recent turns and always opens on a `user`
+   *   message, so we don't hand the model a wall of unanswered chatter.
+   */
+  private buildSafeContextWindow(
+    history: any[],
+  ): Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> {
+    const turns: Array<{ role: 'user' | 'model'; text: string }> = [];
+    for (const msg of history) {
+      const text = typeof msg.content === 'string' && msg.content.trim() ? msg.content : '';
+      if (!text) continue; // drop empty / tool-only rows
+      const role: 'user' | 'model' =
+        String(msg.role || '').toLowerCase() === 'user' ? 'user' : 'model';
+      turns.push({ role, text });
+    }
+
+    const bounded = turns.length > MAX_CONTEXT_TURNS ? turns.slice(-MAX_CONTEXT_TURNS) : turns;
+
+    let start = 0;
+    while (start < bounded.length && bounded[start].role !== 'user') start += 1;
+
+    return bounded.slice(start).map((t) => ({ role: t.role, parts: [{ text: t.text }] }));
   }
 
   private buildToolDeclarations() {
@@ -377,14 +409,10 @@ export class AIService {
         );
       }
 
-      for (const msg of sortedHistory) {
-        const role = msg.role.toLowerCase() === 'user' ? 'user' : 'model';
-        let parts = [{ text: msg.content }];
-        if (msg.metadata?.parts) {
-          parts = msg.metadata.parts;
-        }
-        contents.push({ role, parts });
-      }
+      // CONTEXT SAFETY (contamination fix): never replay a previous turn's
+      // functionCall/functionResponse into a NEW request, cap the window, and
+      // start on a user turn so an old intent cannot fire a new tool call.
+      contents.push(...this.buildSafeContextWindow(sortedHistory));
     }
 
     const lastHistoryMsg = contents[contents.length - 1];
@@ -462,7 +490,29 @@ export class AIService {
         const finalText = finalResponse.text();
 
         if (!finalText || finalText.trim() === '') {
-          this.logger.warn('Gemini retornou resposta vazia após function call');
+          // A tool that ran successfully (e.g. search_catalog with zero hits) is a
+          // valid commercial outcome, not a technical failure. Retry ONCE, feeding
+          // Gemini a plain-text directive grounded in exactly the tool results it
+          // just received, so NO_RESULTS is answered naturally ("não encontrei...")
+          // instead of triggering the generic technical fallback. Real tool errors
+          // already surface inside the tool result and are handled upstream.
+          const retryContents = JSON.parse(JSON.stringify(contents));
+          retryContents.push({
+            role: 'user' as const,
+            parts: [
+              {
+                text:
+                  'Com base apenas nos resultados das ferramentas acima, responda ao cliente em português, de forma curta e natural. Se não houver resultados disponíveis, informe educadamente que o item/produto não foi encontrado no catálogo.',
+              },
+            ],
+          });
+          const retryResult = await this.model.generateContent({
+            contents: retryContents,
+            toolConfig: { functionCallingConfig: { mode: 'NONE' as const } },
+          });
+          const retryText = (await retryResult.response).text();
+          if (retryText && retryText.trim() !== '') return retryText.trim();
+          this.logger.warn('Gemini retornou resposta vazia após function call (incl. retry)');
           return 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.';
         }
         return finalText.trim();

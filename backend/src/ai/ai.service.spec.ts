@@ -859,4 +859,107 @@ describe('AIService', () => {
     });
   });
 
-});
+    describe('AI context contamination fixes', () => {
+      const funcCallResp = (name: any, args: any) => ({
+        response: {
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { functionCall: { name, args, id: 'c1' }, thoughtSignature: 'sig' },
+                ],
+              },
+            },
+          ],
+        },
+      });
+      const txtResp = (text: string) => ({
+        response: { text: () => text, candidates: [{ content: { parts: [] } }] },
+      });
+
+      it('does not replay a previous turn functionCall from history into a new request', async () => {
+        mockGenerateContent.mockResolvedValueOnce(funcCallResp('search_catalog', { q: 'Pão tem?' }));
+        mockGenerateContent.mockResolvedValueOnce(txtResp('Encontrei pão.'));
+        (productsService.search as jest.Mock).mockResolvedValueOnce([{ id: 'p2', name: 'Pão Kanda' }]);
+
+        // Previous turn carries a stored functionCall/functionResponse in metadata —
+        // it must NEVER be replayed as a live tool part.
+        const history = [
+          {
+            role: 'user',
+            content: 'Tem banana?',
+            metadata: { parts: [{ functionCall: { name: 'search_catalog', args: { q: 'banana' }, id: 'old' } }] },
+          },
+          {
+            role: 'model',
+            content: '',
+            metadata: { parts: [{ functionResponse: { name: 'search_catalog', response: { results: [] } } }] },
+          },
+        ];
+
+        await service.generateResponseWithHistory('Pão tem?', history);
+
+        const firstCall = mockGenerateContent.mock.calls[0][0];
+        for (const c of firstCall.contents) {
+          for (const p of c.parts) {
+            expect(p).not.toHaveProperty('functionCall');
+            expect(p).not.toHaveProperty('functionResponse');
+          }
+        }
+        // Only the current message drives search; the old tool part is inert.
+        expect(productsService.search).toHaveBeenCalledTimes(1);
+        expect(productsService.search).toHaveBeenCalledWith('Pão tem?');
+      });
+
+      it('answers NO_RESULTS commercially instead of the generic fallback when Gemini returns empty text', async () => {
+        mockGenerateContent.mockResolvedValueOnce(funcCallResp('search_catalog', { q: 'Maçã' }));
+        // Second call (final, mode NONE) returns EMPTY text after a successful tool run.
+        mockGenerateContent.mockResolvedValueOnce({ response: { text: () => '', candidates: [{ content: { parts: [] } }] } });
+        // Retry call then yields a commercial "not found" answer.
+        mockGenerateContent.mockResolvedValueOnce(txtResp('Não encontrei maçã no catálogo neste momento.'));
+        (productsService.search as jest.Mock).mockResolvedValueOnce([]);
+
+        const result = await service.generateResponseWithHistory('Tem maçã?', []);
+
+        expect(result).toBe('Não encontrei maçã no catálogo neste momento.');
+        expect(mockGenerateContent).toHaveBeenCalledTimes(3);
+        const retryCall = mockGenerateContent.mock.calls[2][0];
+        expect(retryCall.toolConfig.functionCallingConfig.mode).toBe('NONE');
+        const lastPart = retryCall.contents[retryCall.contents.length - 1];
+        expect(lastPart.role).toBe('user');
+        expect(lastPart.parts[0].text).toContain('não foi encontrado');
+      });
+
+      it('still returns the generic fallback when the retry is also empty', async () => {
+        mockGenerateContent.mockResolvedValueOnce(funcCallResp('search_catalog', { q: 'Maçã' }));
+        mockGenerateContent.mockResolvedValueOnce({ response: { text: () => '', candidates: [{ content: { parts: [] } }] } });
+        mockGenerateContent.mockResolvedValueOnce({ response: { text: () => '', candidates: [{ content: { parts: [] } }] } });
+        (productsService.search as jest.Mock).mockResolvedValueOnce([]);
+
+        const result = await service.generateResponseWithHistory('Tem maçã?', []);
+
+        expect(result).toBe('Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.');
+        expect(mockGenerateContent).toHaveBeenCalledTimes(3);
+      });
+
+      it('isolates tool state across sequential requests (no cross-request leakage)', async () => {
+        // Request 1 -> banana
+        mockGenerateContent.mockResolvedValueOnce(funcCallResp('search_catalog', { q: 'banana' }));
+        mockGenerateContent.mockResolvedValueOnce(txtResp('Banana.'));
+        (productsService.search as jest.Mock).mockResolvedValueOnce([{ id: 'b1', name: 'Banana Kanda' }]);
+        await service.generateResponseWithHistory('Tem banana?', [], 'u1', 'msg-1');
+
+        // Request 2 -> pão
+        mockGenerateContent.mockResolvedValueOnce(funcCallResp('search_catalog', { q: 'pão' }));
+        mockGenerateContent.mockResolvedValueOnce(txtResp('Pão.'));
+        (productsService.search as jest.Mock).mockResolvedValueOnce([{ id: 'p1', name: 'Pão Kanda' }]);
+        await service.generateResponseWithHistory('Pão tem?', [], 'u1', 'msg-2');
+
+        expect(productsService.search).toHaveBeenCalledTimes(2);
+        expect(productsService.search).toHaveBeenNthCalledWith(1, 'banana');
+        expect(productsService.search).toHaveBeenNthCalledWith(2, 'pão');
+        expect(mockGenerateContent).toHaveBeenCalledTimes(4);
+      });
+    });
+
+  });
