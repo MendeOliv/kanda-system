@@ -228,6 +228,34 @@ describe('CartService', () => {
       expect(prisma.cartItem.upsert).toHaveBeenCalled();
     });
 
+    it('re-adding an existing product increments the quantity instead of overwriting', async () => {
+      // Real behavior: re-adding the same product INCREMENTS its quantity (never overwrites).
+      prisma.product.findUnique.mockResolvedValue({
+        id: 'test-product',
+        name: 'Test Product',
+        price: 100,
+        stock: 10,
+        status: 'active',
+        categoryId: 'test-category',
+        description: 'Test product',
+        discountPrice: null,
+      });
+      prisma.cart.findUnique.mockResolvedValue({ id: 'cart-id', userId: 'test-user', subtotal: 0, deliveryFee: 0, total: 0 });
+      prisma.cartItem.findMany.mockResolvedValue([
+        { id: 'ci1', cartId: 'cart-id', productId: 'test-product', quantity: 1, price: 100, product: { id: 'test-product', name: 'Test Product' } },
+      ]);
+      prisma.cart.update.mockResolvedValue({ id: 'cart-id', items: [], subtotal: 300, deliveryFee: 500, total: 800 });
+
+      await service.addItem('test-user', 'test-product', 2);
+
+      // Assert the exact real mutation path: upsert with quantity increment.
+      expect(prisma.cartItem.upsert).toHaveBeenCalledWith({
+        where: { cartId_productId: { cartId: 'cart-id', productId: 'test-product' } },
+        update: { quantity: { increment: 2 }, price: 100 },
+        create: { cartId: 'cart-id', productId: 'test-product', quantity: 2, price: 100 },
+      });
+    });
+
     it('should invalidate a pending order confirmation when the cart changes', async () => {
       prisma.product.findUnique.mockResolvedValue({
         id: 'test-product',
