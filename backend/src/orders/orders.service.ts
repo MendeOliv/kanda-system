@@ -4,6 +4,20 @@ import { Zone, PaymentMethod, OrderStatus, PaymentStatus, Prisma, Product } from
 import { Decimal } from '@prisma/client/runtime/library';
 import { CartService } from '../cart/cart.service';
 
+/**
+ * Explicit interactive-transaction timeout for order creation.
+ *
+ * The 5000ms Prisma default is too tight for this transaction: create()
+ * legitimately issues several sequential, bounded round-trips (order-number
+ * probe + one conditional stock decrement per cart line + order insert + cart
+ * cleanup + tracking) against the remote Supabase/Postgres over a connection
+ * pooler. The incident that triggered this fix exceeded the 5s default
+ * (5379ms observed). 20s leaves a wide, safe margin while still failing fast on
+ * a genuinely hung query. This is set after analysing the cause (many remote
+ * round-trips), not as a blind bump.
+ */
+const ORDER_TX_TIMEOUT_MS = 20_000;
+
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
@@ -84,119 +98,164 @@ export class OrdersService {
     const deliveryReference = createOrderDto.deliveryReference || 'N/A';
     const paymentMethod = this.normalizePaymentMethod(createOrderDto.paymentMethod);
 
+    // Idempotency pre-check (read-only, OUTSIDE the transaction).
+    //
+    // Moving this read out of the write transaction removes one remote round-trip
+    // from it. Correctness under a race is still guaranteed by the
+    // UNIQUE(externalMessageId) column: a concurrent duplicate makes order.create
+    // throw P2002 inside the transaction, which aborts the WHOLE transaction (so
+    // stock is never decremented twice) and is handled below by returning the
+    // already-existing order.
+    if (externalMessageId) {
+      const existingOrder = await this.prisma.order.findUnique({
+        where: { externalMessageId },
+        include: { items: { include: { product: true } } },
+      });
+      if (existingOrder) {
+        this.logger.warn(
+          `Idempotent create_order: externalMessageId=${externalMessageId} → returning existing order ${existingOrder.orderNumber}`,
+        );
+        return {
+          success: true,
+          order: existingOrder,
+          id: existingOrder.id,
+          orderNumber: existingOrder.orderNumber,
+          totalAmount: existingOrder.totalAmount,
+        };
+      }
+    }
+
     // Everything that must be atomic runs inside a single transaction
-    const order = await this.prisma.$transaction(async (tx) => {
-      // Cast: Omit<PrismaClient, ITXClientDenyList> drops getter-based model delegates
-      const t = tx as unknown as PrismaService;
-      // 1. IDEMPOTENCY: if externalMessageId is provided, check for existing order
-      if (externalMessageId) {
-        const existingOrder = await t.order.findUnique({
+    // (order, order items, stock decrement, tracking, cart cleanup).
+    let createdOrder: any;
+    try {
+      createdOrder = await this.prisma.$transaction(
+        async (tx) => {
+          // Cast: Omit<PrismaClient, ITXClientDenyList> drops getter-based model delegates
+          const t = tx as unknown as PrismaService;
+
+          // Generate order number (inside tx to avoid collision)
+          const orderNumber = await this.generateOrderNumber(t);
+
+          // Decrement stock conditionally for each item
+          let subtotal = 0;
+          const itemsData: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
+
+          for (const cartItem of cart.items) {
+            const product = productMap.get(cartItem.productId)!;
+
+            // Conditional stock decrement: only if stock >= quantity
+            try {
+              await t.product.update({
+                where: {
+                  id: cartItem.productId,
+                  stock: { gte: cartItem.quantity },
+                },
+                data: {
+                  stock: { decrement: cartItem.quantity },
+                },
+              });
+            } catch (err: any) {
+              if (err?.code === 'P2025') {
+                throw new BadRequestException(
+                  `Stock insuficiente para produto: ${product.name} (disponível: ${product.stock}, pedido: ${cartItem.quantity})`,
+                );
+              }
+              throw err;
+            }
+
+            const price = product.discountPrice || product.price;
+            subtotal += Number(price) * cartItem.quantity;
+            itemsData.push({
+              productId: cartItem.productId,
+              quantity: cartItem.quantity,
+              price,
+            });
+          }
+
+          const deliveryFee = subtotal >= 10000 ? 0 : 500;
+          const totalAmount = subtotal + deliveryFee;
+
+          // Create order with items
+          const orderData: any = {
+            orderNumber,
+            userId: user.id,
+            addressId: createOrderDto.addressId,
+            zone,
+            deliveryReference,
+            paymentMethod,
+            deliveryFee,
+            subtotal,
+            totalAmount,
+            status: OrderStatus.PENDING,
+            paymentStatus: PaymentStatus.PENDING,
+            notes: createOrderDto.notes,
+            items: { create: itemsData },
+          };
+          if (externalMessageId) {
+            orderData.externalMessageId = externalMessageId;
+          }
+
+          const created = await t.order.create({
+            data: orderData,
+            include: { items: { include: { product: true } } },
+          });
+
+          // Clear cart items and reset totals (still inside transaction)
+          await t.cartItem.deleteMany({
+            where: { cartId: cart.id },
+          });
+
+          await t.cart.update({
+            where: { id: cart.id },
+            data: { subtotal: 0, deliveryFee: 0, total: 0 },
+          });
+
+          // Create initial tracking entry (inside transaction for atomicity)
+          await t.trackingHistory.create({
+            data: {
+              orderId: created.id,
+              status: 'PENDING',
+              description: 'Pedido criado com sucesso',
+            },
+          });
+
+          return created;
+        },
+        { timeout: ORDER_TX_TIMEOUT_MS },
+      );
+    } catch (err: any) {
+      // Concurrent duplicate on UNIQUE(externalMessageId) — e.g. an AIService
+      // retry racing a just-committed create. The transaction already rolled
+      // back (nothing persisted, stock not decremented again), so return the
+      // existing order instead of surfacing a raw P2002.
+      if (err?.code === 'P2002' && externalMessageId) {
+        const winner = await this.prisma.order.findUnique({
           where: { externalMessageId },
           include: { items: { include: { product: true } } },
         });
-        if (existingOrder) {
+        if (winner) {
           this.logger.warn(
-            `Idempotent create_order: externalMessageId=${externalMessageId} → returning existing order ${existingOrder.orderNumber}`,
+            `Idempotent create_order (P2002 race): externalMessageId=${externalMessageId} → returning existing order ${winner.orderNumber}`,
           );
-          return existingOrder;
+          return {
+            success: true,
+            order: winner,
+            id: winner.id,
+            orderNumber: winner.orderNumber,
+            totalAmount: winner.totalAmount,
+          };
         }
       }
-
-      // 2. Generate order number (inside tx to avoid collision)
-      const orderNumber = await this.generateOrderNumber(t);
-
-      // 3. Decrement stock conditionally for each item
-      let subtotal = 0;
-      const itemsData: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
-
-      for (const cartItem of cart.items) {
-        const product = productMap.get(cartItem.productId)!;
-
-        // Conditional stock decrement: only if stock >= quantity
-        try {
-          await t.product.update({
-            where: {
-              id: cartItem.productId,
-              stock: { gte: cartItem.quantity },
-            },
-            data: {
-              stock: { decrement: cartItem.quantity },
-            },
-          });
-        } catch (err: any) {
-          if (err?.code === 'P2025') {
-            throw new BadRequestException(
-              `Stock insuficiente para produto: ${product.name} (disponível: ${product.stock}, pedido: ${cartItem.quantity})`,
-            );
-          }
-          throw err;
-        }
-
-        const price = product.discountPrice || product.price;
-        subtotal += Number(price) * cartItem.quantity;
-        itemsData.push({
-          productId: cartItem.productId,
-          quantity: cartItem.quantity,
-          price,
-        });
-      }
-
-      const deliveryFee = subtotal >= 10000 ? 0 : 500;
-      const totalAmount = subtotal + deliveryFee;
-
-      // 4. Create order with items
-      const orderData: any = {
-        orderNumber,
-        userId: user.id,
-        addressId: createOrderDto.addressId,
-        zone,
-        deliveryReference,
-        paymentMethod,
-        deliveryFee,
-        subtotal,
-        totalAmount,
-        status: OrderStatus.PENDING,
-        paymentStatus: PaymentStatus.PENDING,
-        notes: createOrderDto.notes,
-        items: { create: itemsData },
-      };
-      if (externalMessageId) {
-        orderData.externalMessageId = externalMessageId;
-      }
-
-      const created = await t.order.create({
-        data: orderData,
-        include: { items: { include: { product: true } } },
-      });
-
-      // 5. Clear cart items and reset totals (still inside transaction)
-      await t.cartItem.deleteMany({
-        where: { cartId: cart.id },
-      });
-
-      await t.cart.update({
-        where: { id: cart.id },
-        data: { subtotal: 0, deliveryFee: 0, total: 0 },
-      });
-
-      // 6. Create initial tracking entry (inside transaction for atomicity)
-      await t.trackingHistory.create({
-        data: {
-          orderId: created.id,
-          status: 'PENDING',
-          description: 'Pedido criado com sucesso',
-        },
-      });
-
-      return created;
-    });
+      throw err;
+    }
 
     return {
       success: true,
-      order,
-      id: order.id,
-      orderNumber: order.orderNumber,
-      totalAmount: order.totalAmount,
+      order: createdOrder,
+      id: createdOrder.id,
+      orderNumber: createdOrder.orderNumber,
+      totalAmount: createdOrder.totalAmount,
     };
   }
 

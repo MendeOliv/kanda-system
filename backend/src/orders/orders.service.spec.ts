@@ -866,6 +866,103 @@ describe('OrdersService', () => {
   });
 
   /* ================================================================ */
+  /*  D — Retry seguro após falha transitória & backstop P2002         */
+  /* ================================================================ */
+
+  describe('D — safe retry after a transient transaction failure', () => {
+    it('surfaces the transient failure and lets a retry create exactly one order', async () => {
+      const user = makeUser();
+      const product = makeProduct();
+      const cartItems = [makeCartItem({ product })];
+      const cart = makeCart(cartItems);
+      const externalMessageId = 'wa-msg-transient';
+
+      prisma.user.findUnique.mockResolvedValue(user);
+      cartService.getCartWithItems.mockResolvedValue(cart);
+      prisma.product.findMany.mockResolvedValue([product]);
+      prisma.product.update.mockResolvedValue({ ...product, stock: 8 });
+      // order.findUnique: idempotency pre-check + generateOrderNumber both return null
+      prisma.order.findUnique.mockResolvedValue(null);
+      prisma.cartItem.deleteMany.mockResolvedValue({ count: 1 });
+      prisma.cart.update.mockResolvedValue({ id: 'cart1', subtotal: 0, deliveryFee: 0, total: 0 });
+      prisma.trackingHistory.create.mockResolvedValue({ id: 'th1', orderId: 'order1', status: 'PENDING', date: new Date(), description: '' });
+
+      const createdOrder = makeCreatedOrder();
+      // Attempt 1: order.create throws a transient, non-P2002 error
+      // (e.g. transaction timeout / connection reset).
+      const transient = Object.assign(
+        new Error('Transaction API error: Transaction already closed'),
+        { code: undefined },
+      );
+      prisma.order.create
+        .mockRejectedValueOnce(transient)
+        .mockResolvedValueOnce(createdOrder);
+
+      // Attempt 1 rejected (transaction rolled back, nothing persisted).
+      await expect(
+        service.create(defaultDto({ externalMessageId }), 'firebaseUid1'),
+      ).rejects.toThrow('Transaction already closed');
+
+      // Retry with the SAME externalMessageId: the pre-check finds no order
+      // (nothing persisted from attempt 1) and creates a fresh one. No duplicate.
+      const result = await service.create(
+        defaultDto({ externalMessageId }),
+        'firebaseUid1',
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.orderNumber).toBe(createdOrder.orderNumber);
+      // Order create was attempted on both calls, but only the retry committed.
+      expect(prisma.order.create).toHaveBeenCalledTimes(2);
+      // Cart cleanup + tracking ran only on the successful (retry) attempt.
+      expect(prisma.cartItem.deleteMany).toHaveBeenCalledTimes(1);
+      expect(prisma.trackingHistory.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns the already-existing order on a P2002 race without cleaning the cart', async () => {
+      const user = makeUser();
+      const product = makeProduct();
+      const cartItems = [makeCartItem({ product })];
+      const cart = makeCart(cartItems);
+      const externalMessageId = 'wa-msg-race';
+
+      const existingOrder = makeCreatedOrder({ externalMessageId, orderNumber: 'KL-7777' });
+
+      prisma.user.findUnique.mockResolvedValue(user);
+      cartService.getCartWithItems.mockResolvedValue(cart);
+      prisma.product.findMany.mockResolvedValue([product]);
+      prisma.product.update.mockResolvedValue({ ...product, stock: 8 });
+
+      const p2002 = Object.assign(new Error('Unique constraint failed'), {
+        code: 'P2002',
+        clientVersion: '6.0.0',
+        meta: { target: ['externalMessageId'] },
+      });
+
+      // pre-check (1st) = null, generateOrderNumber (2nd) = null, then the
+      // post-P2002 winner fetch returns the already-existing order.
+      prisma.order.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue(existingOrder);
+      prisma.order.create.mockRejectedValueOnce(p2002);
+
+      const result = await service.create(
+        defaultDto({ externalMessageId }),
+        'firebaseUid1',
+      );
+
+      expect(result.success).toBe(true);
+      // Existing order returned — no duplicate order row was made.
+      expect(result.orderNumber).toBe('KL-7777');
+      expect(prisma.order.create).toHaveBeenCalledTimes(1);
+      // order.create aborted the whole transaction: no cart cleanup, no tracking.
+      expect(prisma.cartItem.deleteMany).not.toHaveBeenCalled();
+      expect(prisma.trackingHistory.create).not.toHaveBeenCalled();
+    });
+  });
+
+  /* ================================================================ */
   /*  TRACKING ATOMIC — tracking inside transaction                    */
   /* ================================================================ */
 
