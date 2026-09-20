@@ -6,7 +6,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('Checkout')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('api/checkout')
+@Controller('checkout')
 export class CheckoutController {
   constructor(private checkoutService: CheckoutService) {}
 

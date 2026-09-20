@@ -3,7 +3,7 @@ import { NewsletterService } from './newsletter.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Newsletter')
-@Controller('api/newsletter')
+@Controller('newsletter')
 export class NewsletterController {
   constructor(private newsletterService: NewsletterService) {}
 

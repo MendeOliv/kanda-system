@@ -422,9 +422,33 @@ describe('OrdersService', () => {
 
       expect(Number(result.totalAmount)).toBe(800);
     });
-  });
 
-  /* ================================================================ */
+    it('uses the PRODUCT price at order time, not a stale cart snapshot', async () => {
+      const user = makeUser();
+      const product = makeProduct({ price: new Decimal(350), discountPrice: null });
+      // Cart item recorded a STALE price (100); the product currently costs 350.
+      const cartItems = [makeCartItem({ quantity: 2, price: new Decimal(100), product })];
+      const cart = makeCart(cartItems);
+
+      prisma.user.findUnique.mockResolvedValue(user);
+      cartService.getCartWithItems.mockResolvedValue(cart);
+      prisma.product.findMany.mockResolvedValue([product]);
+      prisma.product.update.mockResolvedValue({ ...product, stock: 8 });
+      prisma.order.findUnique.mockResolvedValue(null);
+      const createdOrder = makeCreatedOrder({ subtotal: new Decimal(700), totalAmount: new Decimal(1200) });
+      prisma.order.create.mockResolvedValue(createdOrder);
+      prisma.cartItem.deleteMany.mockResolvedValue({ count: 1 });
+      prisma.cart.update.mockResolvedValue({ id: 'cart1', subtotal: 0, deliveryFee: 0, total: 0 });
+      prisma.trackingHistory.create.mockResolvedValue({ id: 'th1', orderId: 'order1', status: 'PENDING', date: new Date(), description: '' });
+
+      await service.create(defaultDto(), 'firebaseUid1');
+
+      const createCall = prisma.order.create.mock.calls[0][0];
+      // OrderItem.price = product price read at order time (350), never the stale cart/IA value (100)
+      expect(createCall.data.items.create[0].price).toEqual(new Decimal(350));
+      expect(Number(createCall.data.items.create[0].quantity)).toBe(2);
+    });
+  });
   /*  H — Subtotal                                                     */
   /* ================================================================ */
 
@@ -1021,3 +1045,4 @@ describe('OrdersService', () => {
     });
   });
 });
+

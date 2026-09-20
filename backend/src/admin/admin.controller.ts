@@ -7,7 +7,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('Admin')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, AdminAuthGuard)
-@Controller('api/admin')
+@Controller('admin')
 export class AdminController {
   constructor(private adminService: AdminService) {}
 

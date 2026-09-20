@@ -6,7 +6,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('User')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('api/user')
+@Controller('user')
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
