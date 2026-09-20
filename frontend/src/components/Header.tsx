@@ -13,7 +13,6 @@ interface HeaderProps {
 
 export function Header({ showSearch }: HeaderProps) {
   const t = useTranslations("header");
-  const tBrand = useTranslations("brand");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const { count } = useCart();
@@ -41,7 +40,6 @@ export function Header({ showSearch }: HeaderProps) {
         {/* Brand */}
         <Link href="/" className="font-h2 text-h2 text-primary shrink-0 flex items-center gap-xs">
           <img src="/kanda-logo-exact.svg" alt="Kanda" className="h-10 w-auto" />
-          {tBrand("name")}
         </Link>
 
         {/* Search Bar */}
