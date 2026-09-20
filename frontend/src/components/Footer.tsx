@@ -62,6 +62,21 @@ export function Footer() {
         <p className="font-body-sm text-body-sm text-on-secondary opacity-60">
           © {new Date().getFullYear()} Kanda Mercearia. O seu vizinho de confiança em Kilamba.
         </p>
+        <a
+          href="https://codigobinario.it.ao"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-sm inline-flex items-center justify-center gap-xs text-on-secondary opacity-65 hover:opacity-100 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-container"
+          aria-label="Powered by Código Binário - Engenharia de Software e IA Aplicada"
+        >
+          <img
+            src="/codigo-binario-icon-48.png"
+            alt="Código Binário"
+            loading="lazy"
+            className="h-4 w-4 rounded-[4px]"
+          />
+          <span className="font-body-sm text-body-sm">Powered by Código Binário</span>
+        </a>
       </div>
     </footer>
   );

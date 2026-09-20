@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { WhatsAppButton } from "./WhatsAppButton";
 import { type ReactNode } from "react";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -21,6 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {children}
       <Footer />
       <MobileBottomNav />
+      <WhatsAppButton />
     </>
   );
 }

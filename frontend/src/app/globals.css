@@ -34,6 +34,17 @@ body {
   color: #653900;
 }
 
+/* ── Keyboard / accessibility focus ───────────── */
+:focus-visible {
+  outline: 3px solid rgba(139, 80, 0, 0.45);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+::placeholder {
+  color: var(--color-on-surface-variant, #554434);
+  opacity: 0.65;
+}
+
 /* ── Material Symbols ──────────────────────────── */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined', sans-serif;
