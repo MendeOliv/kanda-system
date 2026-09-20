@@ -63,8 +63,8 @@ describe('AIService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGenerateContent.mockReset(); // purge the Once-queue: keep each test hermetic
   });
-
   beforeEach(async () => {
     moduleRef = await Test.createTestingModule({
       providers: [
@@ -255,7 +255,7 @@ describe('AIService', () => {
       });
       // Second call should have toolConfig with mode: 'NONE'
       expect(secondCall.toolConfig).toBeDefined();
-      expect(secondCall.toolConfig.functionCallingConfig.mode).toBe('NONE');
+      expect(secondCall.toolConfig.functionCallingConfig.mode).toBe('AUTO');
     });
 
     it('should execute function call without results and return final response', async () => {
@@ -329,7 +329,7 @@ describe('AIService', () => {
           },
         ],
       });
-      expect(secondCall.toolConfig.functionCallingConfig.mode).toBe('NONE');
+      expect(secondCall.toolConfig.functionCallingConfig.mode).toBe('AUTO');
     });
 
     it('should validate payload structure - functionCall must be nested correctly', async () => {
@@ -960,6 +960,68 @@ describe('AIService', () => {
         expect(productsService.search).toHaveBeenNthCalledWith(2, 'pão');
         expect(mockGenerateContent).toHaveBeenCalledTimes(4);
       });
+
+      it('chains search_catalog -> add_to_cart within one turn ("Sim, 3 por favor")', async () => {
+        const pao = { id: 'p-pao', name: 'Pão Kanda', price: 300, discountPrice: null, stock: 15, status: 'active', sku: 'TEST-PAO-001' };
+        prismaMock.user.findUnique.mockResolvedValue(waUser);
+        (productsService.search as jest.Mock).mockResolvedValueOnce([pao]);
+        cartServiceMock.addItem.mockResolvedValueOnce({
+          cart: { items: [{ productId: 'p-pao', quantity: 3, price: 300, product: { name: 'Pão Kanda' } }], subtotal: 900, deliveryFee: 500, total: 1400 },
+          idempotent: false,
+        });
+
+        // Real observed behaviour: without a cross-turn productId the model (re)searches,
+        // then - thanks to the tool loop - adds to the cart, then answers.
+        mockGenerateContent.mockResolvedValueOnce({ response: { candidates: [{ content: { parts: [{ functionCall: { name: 'search_catalog', args: { q: 'pão' }, id: 'c1' }, thoughtSignature: 's' }] } }] } });
+        mockGenerateContent.mockResolvedValueOnce({ response: { candidates: [{ content: { parts: [{ functionCall: { name: 'add_to_cart', args: { productId: 'p-pao', quantity: 3 }, id: 'c2' }, thoughtSignature: 's' }] } }] } });
+        mockGenerateContent.mockResolvedValueOnce({ response: { candidates: [{ content: { parts: [] } }], text: () => 'Adicionei 3 Pão Kanda ao seu carrinho.' } });
+
+        const history = [
+          { role: 'user', content: 'Tem pão?', timestamp: new Date() },
+          { role: 'model', content: 'Temos o Pão Kanda. Deseja adicionar?', timestamp: new Date() },
+        ];
+
+        const result = await service.generateResponseWithHistory('Sim, 3 por favor', history, '25838925955116@lid', 'wa-add');
+
+        expect(result).toBe('Adicionei 3 Pão Kanda ao seu carrinho.'); // NOT the technical fallback
+        expect(mockGenerateContent).toHaveBeenCalledTimes(3); // search + add + final text
+        expect(productsService.search).toHaveBeenCalledWith('pão');
+        expect(cartServiceMock.addItem).toHaveBeenCalledWith('user-1', 'p-pao', 3, 'wa-add');
+      });
+
+      it('resolves "ver carrinho" to view_cart after adding', async () => {
+        prismaMock.user.findUnique.mockResolvedValue(waUser);
+        cartServiceMock.getCart.mockResolvedValueOnce({
+          items: [{ productId: 'p-pao', quantity: 3, price: 300, product: { name: 'Pão Kanda' } }],
+          subtotal: 900, deliveryFee: 500, total: 1400,
+        });
+        mockGenerateContent.mockResolvedValueOnce({ response: { candidates: [{ content: { parts: [{ functionCall: { name: 'view_cart', args: {}, id: 'c1' }, thoughtSignature: 's' }] } }] } });
+        mockGenerateContent.mockResolvedValueOnce({ response: { candidates: [{ content: { parts: [] } }], text: () => 'O seu carrinho tem 3x Pão Kanda.' } });
+
+        const result = await service.generateResponseWithHistory('ver carrinho', [], '25838925955116@lid', 'wa-view');
+
+        expect(result).toContain('Pão Kanda');
+        expect(cartServiceMock.getCart).toHaveBeenCalledWith('user-1');
+        expect(mockGenerateContent).toHaveBeenCalledTimes(2);
+      });
+
+      it('terminates the tool loop after a bounded number of rounds (no infinite loop)', async () => {
+        prismaMock.user.findUnique.mockResolvedValue(waUser);
+        (productsService.search as jest.Mock).mockResolvedValueOnce([{ id: 'p-pao', name: 'Pão Kanda' }]);
+        // The model keeps requesting tools; the service must cap the loop.
+        for (let i = 0; i < 5; i++) {
+          mockGenerateContent.mockResolvedValueOnce({ response: { candidates: [{ content: { parts: [{ functionCall: { name: 'search_catalog', args: { q: 'pão' }, id: 'c' + i }, thoughtSignature: 's' }] } }] } });
+        }
+        mockGenerateContent.mockResolvedValueOnce({ response: { candidates: [{ content: { parts: [] } }], text: () => 'Pronto.' } });
+
+        const result = await service.generateResponseWithHistory('pão', [], '25838925955116@lid', 'wa-loop');
+
+        expect(result).toBe('Pronto.');
+        expect(mockGenerateContent.mock.calls.length).toBeLessThanOrEqual(6);
+      });
     });
 
+
   });
+
+

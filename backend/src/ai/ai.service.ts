@@ -431,99 +431,86 @@ export class AIService {
     const tools = [{ functionDeclarations: this.buildToolDeclarations() }];
 
     try {
-      const initialContents = JSON.parse(JSON.stringify(contents));
-      const result = await this.model.generateContent({
-        contents: initialContents,
-        tools,
-        toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
-      });
+      // Bounded function-calling loop: within ONE request the model may chain
+      // several sequential tool calls (e.g. search_catalog -> add_to_cart) until
+      // it returns a text answer. This is what lets "Sim, 3 por favor" end in
+      // add_to_cart after a (re)search instead of a forced empty final generation.
+      const MAX_ROUNDS = 5;
+      const cartMutationCounter = { value: 0 }; // scopes per-message cart mutation tokens
+      let executedAnyTool = false;
 
-      const response = await result.response;
-      const candidate = response.candidates?.[0];
-      const parts = candidate?.content?.parts || [];
-      const functionCalls = parts.filter((p: any) => p.functionCall);
-
-      if (functionCalls.length > 0) {
-        this.logger.log(`Found ${functionCalls.length} function calls`);
-
-        // Preserve the model's tool-request turn exactly (keeps thoughtSignature).
-        contents.push({ role: 'model', ...JSON.parse(JSON.stringify(candidate.content)) });
-
-        // Per-turn counter used to scope the idempotency token of multiple cart mutations.
-        const cartMutationCounter = { value: 0 };
-
-        for (const part of functionCalls) {
-          const call = part.functionCall;
-          this.logger.log(`Executing tool ${call.name} with args ${JSON.stringify(call.args ?? {})}`);
-          let toolResult: { ok: boolean; result: any };
-          try {
-            toolResult = await this.executeToolCall(
-              call,
-              customerId,
-              externalMessageId,
-              cartMutationCounter,
-            );
-          } catch (toolError: any) {
-            this.logger.error(`Tool ${call.name} failed: ${toolError.message}`, toolError.stack);
-            toolResult = { ok: false, result: { error: toolError?.message ?? 'Tool execution failed' } };
-          }
-          contents.push({
-            role: 'user',
-            parts: [
-              {
-                functionResponse: {
-                  name: call.name,
-                  response: toolResult.result,
-                },
-              },
-            ],
-          });
-        }
-
-        const finalResult = await this.model.generateContent({
-          contents,
+      for (let round = 0; round < MAX_ROUNDS; round++) {
+        const result = await this.model.generateContent({
+          contents: JSON.parse(JSON.stringify(contents)),
           tools,
-          toolConfig: { functionCallingConfig: { mode: 'NONE' } },
+          toolConfig: { functionCallingConfig: { mode: 'AUTO' as const } },
         });
 
-        const finalResponse = await finalResult.response;
-        const finalText = finalResponse.text();
+        const response = await result.response;
+        const candidate = response.candidates?.[0];
+        const parts = candidate?.content?.parts || [];
+        const functionCalls = parts.filter((p: any) => p.functionCall);
 
-        if (!finalText || finalText.trim() === '') {
-          // A tool that ran successfully (e.g. search_catalog with zero hits) is a
-          // valid commercial outcome, not a technical failure. Retry ONCE, feeding
-          // Gemini a plain-text directive grounded in exactly the tool results it
-          // just received, so NO_RESULTS is answered naturally ("não encontrei...")
-          // instead of triggering the generic technical fallback. Real tool errors
-          // already surface inside the tool result and are handled upstream.
-          const retryContents = JSON.parse(JSON.stringify(contents));
-          retryContents.push({
-            role: 'user' as const,
-            parts: [
-              {
-                text:
-                  'Com base apenas nos resultados das ferramentas acima, responda ao cliente em português, de forma curta e natural. Se não houver resultados disponíveis, informe educadamente que o item/produto não foi encontrado no catálogo.',
-              },
-            ],
-          });
-          const retryResult = await this.model.generateContent({
-            contents: retryContents,
-            toolConfig: { functionCallingConfig: { mode: 'NONE' as const } },
-          });
-          const retryText = (await retryResult.response).text();
-          if (retryText && retryText.trim() !== '') return retryText.trim();
-          this.logger.warn('Gemini retornou resposta vazia após function call (incl. retry)');
-          return 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.';
+        if (functionCalls.length > 0) {
+          this.logger.log(`[AIService] Round ${round}: ${functionCalls.length} function call(s)`);
+
+          // Preserve the model's tool-request turn exactly (keeps thoughtSignature).
+          contents.push({ role: 'model' as const, ...JSON.parse(JSON.stringify(candidate.content)) });
+
+          for (const part of functionCalls) {
+            const call = part.functionCall;
+            this.logger.log(`[AIService] Executing tool ${call.name} with args ${JSON.stringify(call.args ?? {})}`);
+            let toolResult: { ok: boolean; result: any };
+            try {
+              toolResult = await this.executeToolCall(call, customerId, externalMessageId, cartMutationCounter);
+            } catch (toolError: any) {
+              this.logger.error(`Tool ${call.name} failed: ${toolError.message}`, toolError.stack);
+              toolResult = { ok: false, result: { error: toolError?.message ?? 'Tool execution failed' } };
+            }
+            executedAnyTool = true;
+            contents.push({
+              role: 'user' as const,
+              parts: [{ functionResponse: { name: call.name, response: toolResult.result } }],
+            });
+          }
+          continue; // loop again so Gemini can chain the next tool or answer
         }
-        return finalText.trim();
+
+        // No function call: this is the model's answer.
+        const text = response.text();
+        if (text && text.trim() !== '') return text.trim();
+
+        // Empty text with no tool call -> stop and decide below.
+        break;
       }
 
-      const text = response.text();
-      if (!text || text.trim() === '') {
-        this.logger.warn('Gemini retornou resposta vazia');
+      // No final text after the loop. If a tool ran (e.g. NO_RESULTS), retry once
+      // feeding a text directive grounded in the tool results so the model replies
+      // commercially instead of a generic fallback. Real tool errors already surface
+      // inside the tool results and are handled upstream.
+      if (executedAnyTool) {
+        const retryContents = JSON.parse(JSON.stringify(contents));
+        retryContents.push({
+          role: 'user' as const,
+          parts: [
+            {
+              text:
+                'Com base apenas nos resultados das ferramentas acima, responda ao cliente em português, de forma curta e natural. Se não houver resultados disponíveis, informe educadamente que o item/produto não foi encontrado no catálogo.',
+            },
+          ],
+        });
+        const retryResult = await this.model.generateContent({
+          contents: retryContents,
+          toolConfig: { functionCallingConfig: { mode: 'NONE' as const } },
+        });
+        const retryText = (await retryResult.response).text();
+        if (retryText && retryText.trim() !== '') return retryText.trim();
+        this.logger.warn('Gemini retornou resposta vazia após function call (incl. retry)');
         return 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.';
       }
-      return text.trim();
+
+      this.logger.warn('Gemini retornou resposta vazia');
+      return 'Desculpe, não consegui gerar uma resposta no momento. Por favor, tente novamente.';
     } catch (error) {
       if (error?.status === 429) {
         this.logger.error('[AIService] Gemini quota exceeded (429)');
@@ -537,3 +524,4 @@ export class AIService {
     }
   }
 }
+
