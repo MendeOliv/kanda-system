@@ -11,6 +11,7 @@ interface Config {
   qrCodeOutput: string;
   waWebVersion: number;
   authDir: string;
+  phoneNumber?: string;
   backendUrl: string;
   backendApiToken: string;
   logLevel: string;
@@ -33,6 +34,22 @@ const resolveAuthDir = (): string => {
   return path.resolve(process.cwd(), 'auth_info_baileys');
 };
 
+// WhatsApp pairing number: international format, digits only (e.g. 2449XXXXXXXX).
+// No '+', spaces, parentheses or dashes. Never logged or hardcoded.
+const PHONE_NUMBER_PATTERN = /^[1-9]\d{7,14}$/;
+
+const isValidPhoneNumberFormat = (value: string): boolean => PHONE_NUMBER_PATTERN.test(value);
+
+// Trim accidental whitespace only; never transform the value.
+const trimmedPhoneNumber = process.env.PHONE_NUMBER?.trim() ?? '';
+const phoneNumber = trimmedPhoneNumber !== '' ? trimmedPhoneNumber : undefined;
+
+if (phoneNumber && !isValidPhoneNumberFormat(phoneNumber)) {
+  console.error(
+    '[WA PAIRING] Invalid PHONE_NUMBER format: use international format, digits only (e.g. 2449XXXXXXXX). No +, spaces, parentheses or dashes.'
+  );
+}
+
 const config: Config = {
   port: parseInt(process.env.PORT ?? '3000', 10),
   host: process.env.HOST ?? '0.0.0.0',
@@ -40,9 +57,21 @@ const config: Config = {
   qrCodeOutput: process.env.QR_CODE_OUTPUT ?? 'terminal',
   waWebVersion: parseInt(process.env.WA_WEB_VERSION ?? '2', 10),
   authDir: resolveAuthDir(),
+  phoneNumber,
   backendUrl: process.env.BACKEND_URL ?? 'http://localhost:3001',
   backendApiToken: process.env.BACKEND_API_TOKEN ?? 'change-me',
   logLevel: process.env.LOG_LEVEL ?? 'info',
 };
+
+/**
+ * Returns the configured pairing phone number only when it is set AND valid.
+ * The number is never logged or exposed by the application.
+ */
+export function getPairingPhoneNumber(): string | undefined {
+  if (!phoneNumber || !isValidPhoneNumberFormat(phoneNumber)) {
+    return undefined;
+  }
+  return phoneNumber;
+}
 
 export default config;

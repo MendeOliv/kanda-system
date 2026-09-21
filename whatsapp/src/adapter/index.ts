@@ -183,14 +183,13 @@ function attachListenersToSock(sock: any): void {
 async function connectionListener(update: any): Promise<void> {
   const { connection, lastDisconnect, qr, pairingCode } = update;
 
-  // NEW: Handle pairing code (Baileys 7.0+)
+  // Pairing code and QR are owned by the engine (single requestPairingCode()
+  // call lives in src/engine/whatsapp.ts). The adapter only observes events and
+  // never requests pairing codes or renders QR content.
   if (pairingCode) {
-    console.log('[ADAPTER] Pairing code (enter on WhatsApp):');
-    console.log(pairingCode);
-    console.log('[ADAPTER] Open WhatsApp → Settings → Linked Devices → Link a Device → type this code');
+    console.log('[ADAPTER] Pairing code event observed (engine presents the code)');
   } else if (qr) {
-    console.log('[ADAPTER QR] QR code received, scan to connect');
-    // QR is available - display it
+    console.log('[ADAPTER] QR event observed (terminal QR rendering is disabled)');
   }
 
   if (connection === 'close') {
