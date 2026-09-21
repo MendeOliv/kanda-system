@@ -2,6 +2,12 @@
 // CHROME & WMIC SPAWN INTERCEPTION - Must be FIRST
 // ============================================================================
 
+if (process.platform === 'win32') {
+// ============================================================
+// Legacy spawn interception (Chrome/WMIC) — WhatsApp-web.js only.
+// Intentionally Windows-local: never runs on Linux/Railway and
+// cannot affect Baileys, which spawns no chrome.exe/wmic.
+// ============================================================
 const Module = require('module');
 const originalRequire = Module.prototype.require;
 
@@ -86,11 +92,12 @@ Module.prototype.require = function(id: string) {
   }
   
   return module;
-};
+  };
+  }
 
-// ============================================================================
-// END SPAWN INTERCEPTION
-// ============================================================================
+  // ============================================================================
+  // END SPAWN INTERCEPTION
+  // ============================================================================
 
 if (process.platform === 'win32') {
   const shimDir = 'C:\\\\\\\\Users\\\\\\\\UTILIZADOR\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\wmic_shim';
@@ -132,10 +139,11 @@ process.on('exit', (code: number) => {
 
 console.log('[DEBUG] About to import app...');
 import app from './api';
+import config from './config';
 console.log('[DEBUG] App imported.');
 
 console.log('[DEBUG] About to import engine...');
-import { startWhatsAppClient, destroyWhatsAppClient } from './engine/whatsapp';
+import { destroyWhatsAppClient } from './engine/whatsapp';
 console.log('[DEBUG] Engine imported.');
 
 console.log('[DEBUG] About to import adapter...');
@@ -150,33 +158,24 @@ console.log('[DEBUG] Adapter imported.');
 // Initialize server and WhatsApp client
 // ============================================================================
 
-console.log('[DEBUG] Creating server...');
-const port = process.env.PORT || 3000;
+// Start the HTTP server FIRST so /health is available even while Baileys is
+// connecting/reconnecting. This keeps Railway's healthcheck responsive and
+// never blocks the process on WhatsApp connection attempts.
+const server = app.listen(config.port, config.host, () => {
+  console.log(`[OK] Server listening on ${config.host}:${config.port}`);
+});
 
-console.log('[DEBUG] Starting WhatsApp client (via adapter)...');
+server.on('error', (err) => {
+  console.error('[ERROR] Server error:', err);
+});
+
+// Start WhatsApp (via adapter) in the background; the HTTP layer is already up.
+// startWhatsAppAdapter delegates to the engine client (SINGLE socket) and
+// attaches the messages.upsert listener that forwards incoming messages
+// to the backend (POST /api/whatsapp/message).
 startWhatsAppAdapter()
   .then(() => {
-    console.log('[DEBUG] WhatsApp client started.');
-    
-    console.log('[DEBUG] Starting server on port:', port);
-    const server = app.listen(port, () => {
-      console.log(`[OK] Server listening on port ${port}`);
-      console.log('[OK] WhatsApp Adapter is ready.');
-    });
-
-    server.on('error', (err) => {
-      console.error('[ERROR] Server error:', err);
-    });
-
-    process.on('SIGTERM', () => {
-      console.log('[SIGNAL] SIGTERM received.');
-      destroyWhatsAppClient();
-    });
-
-    process.on('SIGINT', () => {
-      console.log('[SIGNAL] SIGINT received.');
-      destroyWhatsAppClient();
-    });
+    console.log('[OK] WhatsApp Adapter is ready.');
   })
   .catch((err) => {
     console.error('[FATAL] Failed to start WhatsApp client:', err);
@@ -189,9 +188,25 @@ startWhatsAppAdapter()
 console.log('[DEBUG] Main script setup complete.');
 
 // ============================================================================
-// Keep-alive signal
+// Graceful shutdown (SIGTERM/SIGINT)
 // ============================================================================
+// Normal shutdown must NOT delete the Baileys session (auth_info_baileys).
+// We close the WhatsApp socket and the HTTP server, then exit cleanly.
+// The session state persists on disk and is reused on the next start.
+async function shutdown(signal: string): Promise<void> {
+  console.log(`[SIGNAL] ${signal} received. Closing gracefully (session is preserved).`);
+  try {
+    await destroyWhatsAppClient();
+  } catch (err) {
+    console.error('[SIGNAL] Error destroying WhatsApp client:', err);
+  }
+  server.close(() => {
+    console.log('[SIGNAL] HTTP server closed. Exiting.');
+    process.exit(0);
+  });
+  // Safety net: if a lingering handle keeps the loop alive, force-exit.
+  setTimeout(() => process.exit(0), 5000).unref();
+}
 
-setInterval(() => {
-  console.log('[ALIVE] Process is still running...');
-}, 5000);
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

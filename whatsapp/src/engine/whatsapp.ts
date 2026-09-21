@@ -2,6 +2,12 @@
 // CHROME & WMIC SPAWN INTERCEPTION - Must be FIRST
 // ============================================================================
 
+if (process.platform === 'win32') {
+// ============================================================
+// Legacy spawn interception (Chrome/WMIC) — WhatsApp-web.js only.
+// Intentionally Windows-local: never runs on Linux/Railway and
+// cannot affect Baileys, which spawns no chrome.exe/wmic.
+// ============================================================
 const Module = require('module');
 const originalRequire = Module.prototype.require;
 
@@ -87,6 +93,7 @@ Module.prototype.require = function(id: string) {
   
   return module;
 };
+}
 
 // ============================================================================
 // END SPAWN INTERCEPTION
@@ -151,7 +158,7 @@ let isConnecting = false;
  * Ensure auth directory exists
  */
 function ensureAuthDir(): string {
-  const authDir = path.join(process.cwd(), 'auth_info_baileys');
+  const authDir = config.authDir;
   if (!fs.existsSync(authDir)) {
     fs.mkdirSync(authDir, { recursive: true });
     console.log('[BAILEYS] Auth directory created:', authDir);
