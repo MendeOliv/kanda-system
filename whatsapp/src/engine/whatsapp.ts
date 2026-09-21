@@ -145,7 +145,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import logger from '../logger';
-import config from '../config';
+import config, { getPairingPhoneNumber } from '../config';
 import fs from 'fs';
 import path from 'path';
 
@@ -153,6 +153,11 @@ import path from 'path';
 let sock: any = null;
 let whatsappStatus: string = 'UNKNOWN';
 let isConnecting = false;
+
+// Pairing code lifecycle guard: one socket, one auth cycle,
+// one requestPairingCode() call. Reset in a controlled way when a new
+// socket and a new authentication cycle are actually started.
+let pairingCodeRequested = false;
 
 /**
  * Ensure auth directory exists
@@ -208,12 +213,19 @@ export const startWhatsAppClient = async (): Promise<any> => {
   }
 
   isConnecting = true;
+  // New socket = new auth cycle; a pairing code may be requested again.
+  pairingCodeRequested = false;
   console.log('[BAILEYS] Starting WhatsApp client...');
 
   try {
     const authDir = ensureAuthDir();
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
     console.log('[BAILEYS] Auth registered:', state.creds.registered);
+    if (state.creds.registered) {
+      console.log('[WA AUTH] Existing WhatsApp session found');
+    } else {
+      console.log('[WA AUTH] No registered WhatsApp session found');
+    }
     const { version } = await fetchLatestBaileysVersion();
 
     console.log('[BAILEYS] Using Baileys version:', version.join('.'));
@@ -235,24 +247,61 @@ export const startWhatsAppClient = async (): Promise<any> => {
       qrTimeout: 60000,  // 60 second timeout
     });
 
+    // Local reference to this cycle's socket (module-level sock may be
+    // replaced by a reconnection while this closure is still alive).
+    const currentSock = sock;
+
     // Handle credentials update
     sock.ev.on('creds.update', saveCreds);
+
+    // Pairing code flow (Baileys 7.0+ requestPairingCode API).
+    // Requested at most ONCE per auth cycle, only when the session is not
+    // registered and PHONE_NUMBER is configured. It must run while the
+    // WebSocket handshake is open, so it is triggered by the first 'qr'
+    // event (proof the connection is up) after the socket exists.
+    const requestPairingCodeOnce = async (): Promise<void> => {
+      if (pairingCodeRequested || state.creds.registered) {
+        return;
+      }
+
+      const phoneNumber = getPairingPhoneNumber();
+      if (!phoneNumber) {
+        console.error('[WA PAIRING] No registered WhatsApp session and PHONE_NUMBER is not configured');
+        console.error('[WA PAIRING] Administrator must configure PHONE_NUMBER (international format, digits only) to enable pairing');
+        return;
+      }
+
+      pairingCodeRequested = true;
+      console.log('[WA PAIRING] Requesting pairing code...');
+      try {
+        const code = await currentSock.requestPairingCode(phoneNumber);
+        console.log('[WA PAIRING] Pairing code received');
+        console.log(`[WA PAIRING] CODE: ${code}`);
+        console.log('[WA PAIRING] Open WhatsApp → Settings → Linked Devices → Link a Device → Link with phone number');
+      } catch (err) {
+        // Allow a retry on the next auth cycle; never crash the service here.
+        pairingCodeRequested = false;
+        console.error('[WA PAIRING] Failed to request pairing code:', err);
+      }
+    };
 
     // Handle connection updates
     sock.ev.on('connection.update', async (update: any) => {
       const { connection, lastDisconnect, qr, pairingCode } = update;
 
-      // NEW: Handle pairing code (Baileys 7.0+)
-      if (pairingCode) {
-        console.log('[WA PAIRING] Pairing code (enter on WhatsApp):');
-        console.log(pairingCode);
-        console.log('[WA PAIRING] Open WhatsApp → Settings → Linked Devices → Link a Device → type this code');
+      // Baileys may surface a pairing code event; the engine owns the
+      // requestPairingCode() call above, this branch is observability only
+      // (skipped when the engine already presented the requested code).
+      if (pairingCode && !pairingCodeRequested) {
+        console.log('[WA PAIRING] Pairing code received');
+        console.log(`[WA PAIRING] CODE: ${pairingCode}`);
+        console.log('[WA PAIRING] Open WhatsApp → Settings → Linked Devices → Link a Device → Link with phone number');
       }
       else if (qr) {
-        console.log('[WA AUTH] New authentication required');
-        console.log('[WA AUTH] QR code received, rendering...');
-        const qrcode = require('qrcode-terminal');
-        qrcode.generate(qr, { small: true });
+        // QR is intentionally never rendered (headless/Railway environment).
+        console.log('[WA AUTH] QR received, but terminal QR rendering is disabled; use pairing code.');
+        // The WebSocket is open when 'qr' fires: safe window to request the code.
+        await requestPairingCodeOnce();
       }
 
       if (connection === 'close') {

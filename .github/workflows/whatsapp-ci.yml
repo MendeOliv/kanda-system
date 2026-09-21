@@ -1,0 +1,55 @@
+name: CI - WhatsApp Service
+
+on:
+  push:
+    branches: [main, develop, master]
+  pull_request:
+    branches: [main, develop, master]
+
+jobs:
+  whatsapp:
+    name: Build (tsc)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./whatsapp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: whatsapp/package-lock.json
+
+      - name: Install dependencies (npm ci)
+        run: npm ci
+
+      - name: Build (tsc)
+        run: npm run build
+
+      - name: Verify no qrcode-terminal in build output
+        run: |
+          if grep -R "qrcode-terminal" dist; then
+            echo "::error::qrcode-terminal found in build output"
+            exit 1
+          fi
+          echo "OK: no qrcode-terminal in build output"
+
+      - name: Verify single requestPairingCode call site (engine only)
+        run: |
+          FILES=$(grep -RilE "\.requestPairingCode\(" src --include="*.ts" || true)
+          echo "Files with requestPairingCode calls:"
+          echo "$FILES"
+          COUNT=$(printf '%s' "$FILES" | grep -c . || true)
+          if [ "$COUNT" -ne 1 ]; then
+            echo "::error::requestPairingCode must be called in exactly one file (found: $COUNT)"
+            exit 1
+          fi
+          if ! printf '%s' "$FILES" | grep -q "src/engine/whatsapp.ts"; then
+            echo "::error::requestPairingCode must live in src/engine/whatsapp.ts"
+            exit 1
+          fi
+          echo "OK: single requestPairingCode call site in src/engine/whatsapp.ts"
