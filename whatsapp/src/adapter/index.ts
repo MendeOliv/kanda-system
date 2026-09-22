@@ -239,12 +239,9 @@ async function onMessageUpsert(m: any): Promise<void> {
 
       const normalized = normalizeWhatsAppMessage(msg);
       console.log(`[ADAPTER] Normalized message: ${JSON.stringify(normalized)}`); // DEBUG
-      // Ignore messages sent by ourselves to prevent loops
-      if (normalized.fromMe === true) {
-        console.log('[ADAPTER] Ignoring message from self');
-        continue;
-      }
-
+      // Self-messages are intentionally allowed through.
+      // This permits processing messages sent from the WhatsApp account itself.
+      // Keep fromMe in the normalized payload so downstream logic can distinguish them.
       // Idempotency check: skip if we have already processed this externalMessageId
       if (processedMessagesCache.has(normalized.externalMessageId)) {
         console.log(`[ADAPTER] Duplicate message ignored: ${normalized.externalMessageId}`);
