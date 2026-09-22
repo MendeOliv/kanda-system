@@ -32,7 +32,7 @@ export function LanguageSwitcher() {
         id="language-switcher"
         value={locale}
         onChange={(event) => switchLocale(event.target.value as AppLocale)}
-        className="rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-2 py-1.5 text-sm font-medium text-on-surface-variant hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className="rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-1 md:px-2 py-1.5 text-sm font-medium text-on-surface-variant hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
         aria-label={t('label')}
       >
         {routing.locales.map((item) => (

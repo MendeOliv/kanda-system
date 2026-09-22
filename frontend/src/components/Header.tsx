@@ -6,6 +6,19 @@ import { useTranslations } from "next-intl";
 import { useCart } from "@/lib/cart-context";
 import { getCurrentFirebaseUser } from "@/lib/firebase";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import {
+  Search,
+  ShoppingCart,
+  UserCircle,
+  UserRound,
+  Menu,
+  X,
+  Home,
+  Store,
+  Info,
+  Phone,
+  CircleHelp,
+} from "lucide-react";
 
 interface HeaderProps {
   showSearch?: boolean;
@@ -28,15 +41,15 @@ export function Header({ showSearch }: HeaderProps) {
   }, []);
 
   const navItems = [
-    { label: t("home"), href: "/", icon: "home" },
-    { label: t("market"), href: "/mercado", icon: "local_mall" },
-    { label: "Sobre Nós", href: "/sobre", icon: "info" },
-    { label: "Contactos", href: "/contactos", icon: "call" },
+    { label: t("home"), href: "/", icon: Home },
+    { label: t("market"), href: "/mercado", icon: Store },
+    { label: "Sobre Nós", href: "/sobre", icon: Info },
+    { label: "Contactos", href: "/contactos", icon: Phone },
   ];
 
   return (
     <header className="w-full sticky top-0 z-50 shadow-sm bg-surface-container-lowest">
-      <div className="flex justify-between items-center px-container-margin py-md max-w-7xl mx-auto w-full">
+      <div className="flex justify-between items-center px-3 md:px-container-margin py-md max-w-7xl mx-auto w-full">
         {/* Brand */}
         <Link href="/" className="font-h2 text-h2 text-primary shrink-0 flex items-center gap-xs">
           <img src="/kanda-logo-exact.svg" alt="Kanda" className="h-10 w-auto" />
@@ -47,7 +60,7 @@ export function Header({ showSearch }: HeaderProps) {
           <div className="hidden md:flex flex-1 max-w-2xl px-lg">
             <div className="relative flex items-center w-full h-12 rounded-full bg-surface-container border border-outline-variant focus-within:border-primary-container focus-within:ring-2 focus-within:ring-primary-container/20 transition-all overflow-hidden shadow-[0px_2px_8px_rgba(26,43,76,0.06)]">
               <div className="pl-md text-secondary">
-                <span className="material-symbols-outlined">search</span>
+                <Search className="h-6 w-6" strokeWidth={2} aria-hidden="true" />
               </div>
               <input
                 className="w-full h-full bg-transparent border-none focus:ring-0 text-on-surface font-body-md px-sm placeholder-secondary/70"
@@ -72,16 +85,16 @@ export function Header({ showSearch }: HeaderProps) {
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-sm shrink-0">
+        <div className="flex items-center gap-1.5 md:gap-sm shrink-0">
           <LanguageSwitcher />
 
           {/* Cart */}
           <Link
             href="/carrinho"
-            className="p-xs text-secondary hover:bg-surface-container-low transition-colors rounded-full relative"
+            className="p-1.5 md:p-xs text-secondary hover:bg-surface-container-low transition-colors rounded-full relative"
             aria-label={t("cart")}
           >
-            <span className="material-symbols-outlined">shopping_cart</span>
+            <ShoppingCart className="h-6 w-6" strokeWidth={2} aria-hidden="true" />
             {count > 0 && (
               <span className="absolute top-1 right-1 bg-primary-container text-on-primary-container font-label-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
                 {count}
@@ -92,21 +105,27 @@ export function Header({ showSearch }: HeaderProps) {
           {/* Account */}
           <Link
             href={user ? "/perfil" : "/login"}
-            className="p-xs text-secondary hover:bg-surface-container-low transition-colors rounded-full"
+            className="p-1.5 md:p-xs text-secondary hover:bg-surface-container-low transition-colors rounded-full"
             aria-label={t("account")}
           >
-            <span className="material-symbols-outlined">
-              {user ? "account_circle" : "person"}
-            </span>
+            {user ? (
+              <UserCircle className="h-6 w-6" strokeWidth={2} aria-hidden="true" />
+            ) : (
+              <UserRound className="h-6 w-6" strokeWidth={2} aria-hidden="true" />
+            )}
           </Link>
 
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-low text-on-surface-variant transition-all"
+            className="lg:hidden flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-full hover:bg-surface-container-low text-on-surface-variant transition-all"
             aria-label={mobileOpen ? t("closeMenu") : t("openMenu")}
           >
-            <span className="material-symbols-outlined">{mobileOpen ? "close" : "menu"}</span>
+            {mobileOpen ? (
+              <X className="h-6 w-6" strokeWidth={2} aria-hidden="true" />
+            ) : (
+              <Menu className="h-6 w-6" strokeWidth={2} aria-hidden="true" />
+            )}
           </button>
         </div>
       </div>
@@ -121,7 +140,7 @@ export function Header({ showSearch }: HeaderProps) {
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-body-md hover:bg-surface-container-low hover:text-primary transition-all"
               onClick={() => setMobileOpen(false)}
             >
-              <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+              <item.icon className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden="true" />
               {item.label}
             </Link>
           ))}
@@ -130,7 +149,7 @@ export function Header({ showSearch }: HeaderProps) {
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-body-md hover:bg-surface-container-low hover:text-primary transition-all"
             onClick={() => setMobileOpen(false)}
           >
-            <span className="material-symbols-outlined text-[20px]">help</span>
+            <CircleHelp className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden="true" />
             Ajuda
           </Link>
           <Link
@@ -138,7 +157,7 @@ export function Header({ showSearch }: HeaderProps) {
             className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-on-primary font-label-bold mt-2 hover:brightness-110 transition-all"
             onClick={() => setMobileOpen(false)}
           >
-            <span className="material-symbols-outlined text-[20px]">person</span>
+            <UserRound className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden="true" />
             {user ? t("account") : t("login")}
           </Link>
         </nav>

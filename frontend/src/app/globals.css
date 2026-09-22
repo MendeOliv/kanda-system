@@ -29,6 +29,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Mobile horizontal overflow protection ───── */
+/* Security net only: the actual causes of the overflow were fixed at the source
+   (nowrap ligature fallback text inside fixed-size circles/nav). */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden; /* fallback for browsers without clip */
+  overflow-x: clip; /* preferred: clips without creating a scroll container, keeps position: sticky working */
+}
+
 ::selection {
   background: #ff9800;
   color: #653900;

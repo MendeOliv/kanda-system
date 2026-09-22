@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
+import { ShoppingBasket, Hand, Wine, Home, Plus } from "lucide-react";
 
 const CATEGORIES = [
-  { name: "Alimentares", icon: "restaurant", href: "/mercado?categoria=alimentares" },
-  { name: "Higiene", icon: "clean_hands", href: "/mercado?categoria=higiene" },
-  { name: "Bebidas", icon: "local_bar", href: "/mercado?categoria=bebidas" },
-  { name: "Casa", icon: "home", href: "/mercado?categoria=casa" },
+  { name: "Alimentares", icon: ShoppingBasket, href: "/mercado?categoria=alimentares" },
+  { name: "Higiene", icon: Hand, href: "/mercado?categoria=higiene" },
+  { name: "Bebidas", icon: Wine, href: "/mercado?categoria=bebidas" },
+  { name: "Casa", icon: Home, href: "/mercado?categoria=casa" },
 ];
 
 const PRODUCTS = [
@@ -59,20 +60,23 @@ export default function HomePage() {
           <h2 className="font-h2 text-h2 text-on-surface">Explorar Categorias</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-md md:gap-lg">
-          {CATEGORIES.map((cat) => (
-            <Link
-              key={cat.name}
-              href={`/${locale}${cat.href}`}
-              className="bg-surface-container-lowest rounded-xl p-md flex flex-col items-center justify-center gap-sm aspect-square cursor-pointer hover:shadow-[0px_8px_24px_rgba(26,43,76,0.12)] transition-shadow border border-outline-variant hover:border-primary-container group"
-            >
-              <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
-                <span className="material-symbols-outlined text-4xl">{cat.icon}</span>
-              </div>
-              <span className="font-label-bold text-label-bold text-on-surface text-center">
-                {cat.name}
-              </span>
-            </Link>
-          ))}
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <Link
+                key={cat.name}
+                href={`/${locale}${cat.href}`}
+                className="min-w-0 bg-surface-container-lowest rounded-xl p-md flex flex-col items-center justify-center gap-sm aspect-square cursor-pointer hover:shadow-[0px_8px_24px_rgba(26,43,76,0.12)] transition-shadow border border-outline-variant hover:border-primary-container group"
+              >
+                <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">
+                  <Icon className="h-8 w-8" strokeWidth={1.8} aria-hidden="true" />
+                </div>
+                <span className="font-label-bold text-label-bold text-on-surface text-center">
+                  {cat.name}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -91,7 +95,7 @@ export default function HomePage() {
           {PRODUCTS.map((p) => (
             <div
               key={p.id}
-              className="bg-surface-container-lowest rounded-lg border border-outline-variant shadow-[0px_2px_8px_rgba(26,43,76,0.06)] overflow-hidden flex flex-col group hover:shadow-[0px_8px_24px_rgba(26,43,76,0.12)] transition-shadow"
+              className="min-w-0 bg-surface-container-lowest rounded-lg border border-outline-variant shadow-[0px_2px_8px_rgba(26,43,76,0.06)] overflow-hidden flex flex-col group hover:shadow-[0px_8px_24px_rgba(26,43,76,0.12)] transition-shadow"
             >
               <div className="aspect-square relative overflow-hidden bg-surface-container">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -125,7 +129,7 @@ export default function HomePage() {
                     }
                     className="mt-sm w-full h-12 bg-primary-container text-on-primary-container font-label-bold rounded-lg flex items-center justify-center gap-xs hover:bg-primary-fixed-dim transition-colors active:scale-95"
                   >
-                    <span className="material-symbols-outlined text-[20px]">add</span>
+                    <Plus className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
                     Adicionar
                   </button>
                 )}
